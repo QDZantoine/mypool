@@ -7,63 +7,74 @@ import '../../models/weather_data.dart';
 import 'weather_providers.dart';
 
 class WeatherPage extends ConsumerWidget {
-  const WeatherPage({super.key, required this.title});
+  const WeatherPage({
+    super.key,
+    this.title = 'Météo',
+    this.showAppBar = false,
+  });
 
   final String title;
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentWeatherAsync = ref.watch(currentWeatherCoordinatesProvider);
     final alertWeatherAsync = ref.watch(alertWeatherCoordinatesProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualiser la météo',
-            onPressed: () {
-              ref.invalidate(userPositionProvider);
-              ref.invalidate(currentWeatherCoordinatesProvider);
-              ref.invalidate(alertWeatherCoordinatesProvider);
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(userPositionProvider);
-          ref.invalidate(currentWeatherCoordinatesProvider);
-          ref.invalidate(alertWeatherCoordinatesProvider);
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _HeaderCard(),
-              const SizedBox(height: 16),
-              _WeatherSection(
-                title: 'Météo Actuelle',
-                icon: Icons.wb_sunny_outlined,
-                weatherAsync: currentWeatherAsync,
-                builder: (weather) => _WeatherDisplay(weather: weather),
-              ),
-              const SizedBox(height: 16),
-              _WeatherSection(
-                title: 'Alertes Météo',
-                icon: Icons.warning_amber_rounded,
-                weatherAsync: alertWeatherAsync,
-                builder: (weather) => _AlertDisplay(weather: weather),
-              ),
-            ],
-          ),
+    final content = RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(userPositionProvider);
+        ref.invalidate(currentWeatherCoordinatesProvider);
+        ref.invalidate(alertWeatherCoordinatesProvider);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _HeaderCard(),
+            const SizedBox(height: 16),
+            _WeatherSection(
+              title: 'Météo Actuelle',
+              icon: Icons.wb_sunny_outlined,
+              weatherAsync: currentWeatherAsync,
+              builder: (weather) => _WeatherDisplay(weather: weather),
+            ),
+            const SizedBox(height: 16),
+            _WeatherSection(
+              title: 'Alertes Météo',
+              icon: Icons.warning_amber_rounded,
+              weatherAsync: alertWeatherAsync,
+              builder: (weather) => _AlertDisplay(weather: weather),
+            ),
+          ],
         ),
       ),
     );
+
+    if (showAppBar) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          elevation: 2,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Actualiser la météo',
+              onPressed: () {
+                ref.invalidate(userPositionProvider);
+                ref.invalidate(currentWeatherCoordinatesProvider);
+                ref.invalidate(alertWeatherCoordinatesProvider);
+              },
+            ),
+          ],
+        ),
+        body: content,
+      );
+    }
+
+    return content;
   }
 }
 

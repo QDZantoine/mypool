@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/pool_config.dart';
 import '../state/providers.dart';
+import '../widgets/weather/weather_page.dart';
+import '../widgets/weather/weather_providers.dart';
 import 'cover_screen.dart';
 import 'filtration_screen.dart';
 import 'history_screen.dart';
@@ -30,7 +32,7 @@ class AquaControlApp extends StatelessWidget {
 
 /// Navigation principale.
 ///
-/// UN SEUL niveau ici, quatre destinations. Le second niveau — saisie,
+/// UN SEUL niveau ici, cinq destinations. Le second niveau — saisie,
 /// historique, liste complète des actions — s'ouvre par-dessus. C'est la
 /// limite que le projet s'impose : « deux niveaux de navigation au maximum »,
 /// parce qu'on ne cherche pas dans une arborescence avec une main occupée.
@@ -59,6 +61,7 @@ class _ShellState extends ConsumerState<_Shell> {
     'AquaControl',
     'Volet',
     'Filtration',
+    'Météo',
     'Réglages',
   ];
 
@@ -80,12 +83,23 @@ class _ShellState extends ConsumerState<_Shell> {
               icon: const Icon(Icons.show_chart),
               onPressed: () => HistoryScreen.open(context),
             ),
+          if (_index == 3)
+            IconButton(
+              tooltip: 'Actualiser la météo',
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                ref.invalidate(userPositionProvider);
+                ref.invalidate(currentWeatherCoordinatesProvider);
+                ref.invalidate(alertWeatherCoordinatesProvider);
+              },
+            ),
         ],
       ),
       body: switch (_index) {
         0 => const HomeScreen(),
         1 => const CoverScreen(),
         2 => const FiltrationScreen(),
+        3 => const WeatherPage(),
         _ => const SettingsScreen(),
       },
       bottomNavigationBar: NavigationBar(
@@ -111,6 +125,11 @@ class _ShellState extends ConsumerState<_Shell> {
             label: 'Filtration',
           ),
           NavigationDestination(
+            icon: Icon(Icons.wb_sunny_outlined),
+            selectedIcon: Icon(Icons.wb_sunny),
+            label: 'Météo',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.tune_outlined),
             selectedIcon: Icon(Icons.tune),
             label: 'Réglages',
@@ -120,3 +139,4 @@ class _ShellState extends ConsumerState<_Shell> {
     );
   }
 }
+

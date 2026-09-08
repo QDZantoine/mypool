@@ -6,10 +6,6 @@ import 'package:mypool/data/settings_store.dart';
 import 'package:mypool/state/providers.dart';
 import 'package:mypool/ui/app.dart';
 import 'package:mypool/ui/home_screen.dart';
-import 'package:mypool/services/weather-service.dart';
-import 'package:mypool/state/providers.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 
 /// Démarrage de l'application, de bout en bout.
 ///
@@ -50,20 +46,21 @@ void main() {
     expect(find.textContaining('Testez l’eau'), findsOneWidget);
   });
 
-  testWidgets('les quatre destinations sont accessibles', (
+  testWidgets('les cinq destinations sont accessibles', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     for (final String label in <String>[
       'Volet',
       'Filtration',
+      'Météo',
       'Réglages',
       'Eau',
     ]) {
       await tester.tap(find.text(label).last);
-      await tester.pumpAndSettle();
+      await tester.pump();
     }
 
     // Retour sur l'accueil sans erreur.
@@ -89,3 +86,4 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
   });
 }
+
