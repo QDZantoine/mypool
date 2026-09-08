@@ -6,6 +6,7 @@ import 'package:mypool/data/settings_store.dart';
 import 'package:mypool/state/providers.dart';
 import 'package:mypool/ui/app.dart';
 import 'package:mypool/ui/home_screen.dart';
+import 'package:mypool/ui/splash_screen.dart';
 
 /// Démarrage de l'application, de bout en bout.
 ///
@@ -27,9 +28,31 @@ void main() {
           readings ?? InMemoryReadingsRepository(),
         ),
       ],
-      child: const AquaControlApp(),
+      child: const MaterialApp(
+        home: ShellView(),
+      ),
     );
   }
+
+  testWidgets('l’écran de démarrage (SplashScreen) affiche le titre et permet le passage', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: AquaControlApp(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.text('AQUACONTROL'), findsOneWidget);
+
+    // Tap pour passer immédiatement
+    await tester.tap(find.byType(SplashScreen));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
 
   testWidgets('l’application s’ouvre sur l’accueil', (
     WidgetTester tester,
@@ -86,4 +109,5 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
   });
 }
+
 

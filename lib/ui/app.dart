@@ -12,6 +12,7 @@ import 'filtration_screen.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
+import 'splash_screen.dart';
 import 'theme.dart';
 
 /// Racine de l'application.
@@ -24,7 +25,7 @@ class AquaControlApp extends StatelessWidget {
       title: 'AquaControl',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      home: const _Shell(),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -36,14 +37,14 @@ class AquaControlApp extends StatelessWidget {
 /// historique, liste complète des actions — s'ouvre par-dessus. C'est la
 /// limite que le projet s'impose : « deux niveaux de navigation au maximum »,
 /// parce qu'on ne cherche pas dans une arborescence avec une main occupée.
-class _Shell extends ConsumerStatefulWidget {
-  const _Shell();
+class ShellView extends ConsumerStatefulWidget {
+  const ShellView({super.key});
 
   @override
-  ConsumerState<_Shell> createState() => _ShellState();
+  ConsumerState<ShellView> createState() => _ShellViewState();
 }
 
-class _ShellState extends ConsumerState<_Shell> {
+class _ShellViewState extends ConsumerState<ShellView> {
   int _index = 0;
 
   @override
