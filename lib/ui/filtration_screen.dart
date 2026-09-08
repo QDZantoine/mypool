@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/devices/pool_device_driver.dart';
 import '../domain/filtration_planner.dart';
 import '../models/filtration_schedule.dart';
 import '../models/pool_config.dart';
@@ -12,10 +13,10 @@ import 'widgets/day_timeline.dart';
 import 'widgets/section_header.dart';
 import 'widgets/value_display.dart';
 
-/// Planning de filtration conseillé.
+/// Planning de filtration conseillé et commande des relais.
 ///
-/// L'écran explique d'où vient la durée : sans le « pourquoi », un utilisateur
-/// à qui on annonce 13 h de filtration croit à une erreur.
+/// L'écran explique d'où vient la durée et permet de basculer la pompe
+/// et le chauffage pour contrôler les relais Wokwi.
 class FiltrationScreen extends ConsumerWidget {
   const FiltrationScreen({super.key});
 
@@ -29,6 +30,12 @@ class FiltrationScreen extends ConsumerWidget {
 
     final bool filterAlert = ref.watch(
       telemetryProvider.select((TelemetryState s) => s.filterAlert),
+    );
+    final bool? pumpOn = ref.watch(
+      telemetryProvider.select((TelemetryState s) => s.telemetry?.pumpOn),
+    );
+    final bool? heaterOn = ref.watch(
+      telemetryProvider.select((TelemetryState s) => s.telemetry?.heaterOn),
     );
 
     return ListView(
@@ -157,6 +164,74 @@ class FiltrationScreen extends ConsumerWidget {
                   ),
               ],
             ),
+          ),
+        ),
+        const SectionHeader(label: 'Commande des équipements (Relais)'),
+        Card(
+          child: Column(
+            children: <Widget>[
+              SwitchListTile(
+                secondary: Icon(
+                  Icons.power_settings_new,
+                  color: (pumpOn ?? false)
+                      ? AppTheme.chlorine
+                      : theme.colorScheme.outline,
+                ),
+                title: const Text('Pompe de filtration (Relais 1)'),
+                subtitle: Text(
+                  (pumpOn ?? false)
+                      ? 'Relais activé — LED bleue allumée'
+                      : 'Relais désactivé — LED bleue éteinte',
+                ),
+                value: pumpOn ?? false,
+                onChanged: (bool value) async {
+                  try {
+                    await ref
+                        .read(deviceDriverProvider)
+                        .setRelay(DeviceChannel.pump, on: value);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erreur: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: Icon(
+                  Icons.local_fire_department,
+                  color: (heaterOn ?? false)
+                      ? AppTheme.acid
+                      : theme.colorScheme.outline,
+                ),
+                title: const Text('Chauffage (Relais 2)'),
+                subtitle: Text(
+                  (pumpOn ?? false)
+                      ? ((heaterOn ?? false)
+                          ? 'Relais activé — LED rouge allumée'
+                          : 'Relais désactivé — LED rouge éteinte')
+                      : 'Sécurité : la filtration doit être en marche',
+                ),
+                value: heaterOn ?? false,
+                onChanged: (pumpOn ?? false)
+                    ? (bool value) async {
+                        try {
+                          await ref
+                              .read(deviceDriverProvider)
+                              .setRelay(DeviceChannel.heater, on: value);
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erreur: $e')),
+                            );
+                          }
+                        }
+                      }
+                    : null,
+              ),
+            ],
           ),
         ),
         if (config.driver == DriverKind.mqtt) ...<Widget>[

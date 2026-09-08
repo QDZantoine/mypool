@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/settings_store.dart';
@@ -29,7 +30,13 @@ class PoolConfigController extends StateNotifier<PoolConfig> {
   bool get isLoaded => _loaded;
 
   Future<void> load() async {
-    state = await _store.loadPoolConfig();
+    final PoolConfig stored = await _store.loadPoolConfig();
+    if (dotenv.isInitialized && dotenv.env.containsKey('MQTT_HOST')) {
+      state = stored.copyWith(driver: DriverKind.mqtt);
+      _loaded = true;
+      return;
+    }
+    state = stored;
     _loaded = true;
   }
 
@@ -116,7 +123,29 @@ class MqttSettingsController extends StateNotifier<MqttSettings> {
   final SettingsStore _store;
 
   Future<void> load() async {
-    state = await _store.loadMqttSettings();
+    final MqttSettings stored = await _store.loadMqttSettings();
+    if (dotenv.isInitialized && dotenv.env.containsKey('MQTT_HOST')) {
+      final String envDeviceId = dotenv.env['MQTT_DEVICE_ID'] ?? 'a7f3c1e9b2';
+      final String envHost = dotenv.env['MQTT_HOST'] ?? MqttSettings.defaultHost;
+      final int envPort = int.tryParse(dotenv.env['MQTT_PORT'] ?? '') ?? MqttSettings.defaultPort;
+
+      if (stored.deviceId.isEmpty ||
+          stored.deviceId == 'wokwi-esp32-pool' ||
+          stored.host.contains('hivemq.cloud') ||
+          stored.deviceId != envDeviceId) {
+        final MqttSettings updated = stored.copyWith(
+          host: envHost,
+          port: envPort,
+          deviceId: envDeviceId,
+          username: dotenv.env['MQTT_USER'],
+          password: dotenv.env['MQTT_PASSWORD'],
+        );
+        state = updated;
+        await replace(updated);
+        return;
+      }
+    }
+    state = stored;
   }
 
   Future<void> replace(MqttSettings settings) async {

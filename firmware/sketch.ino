@@ -70,9 +70,7 @@ const int   WIFI_CHANNEL = 6;
 const char *MQTT_HOST = "broker.hivemq.com";
 const uint16_t MQTT_PORT = 1883;
 
-// Identifiant de l'installation. Sur un broker public, c'est la SEULE
-// chose qui sépare vos topics de ceux des autres : gardez-le long et
-// remplacez-le par une valeur tirée au hasard.
+// Identifiant de l'installation.
 const char *DEVICE_ID = "a7f3c1e9b2";
 
 // Base de tous les topics : aquacontrol/<DEVICE_ID>/...

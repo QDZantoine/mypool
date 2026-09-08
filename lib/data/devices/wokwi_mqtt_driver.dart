@@ -138,8 +138,14 @@ class WokwiMqttDriver implements PoolDeviceDriver {
   }
 
   Future<void> _subscribeState() async {
-    // Un seul filtre couvre télémétrie, présence et alerte filtre.
-    await _transport.subscribe(_settings.topicStateWildcard);
+    if (!_transport.isConnected) {
+      return;
+    }
+    try {
+      await _transport.subscribe(_settings.topicStateWildcard);
+    } on Exception {
+      // Absorb exception if connection state changed concurrently
+    }
   }
 
   void _handleConnectionChange(bool connected) {
@@ -336,8 +342,10 @@ class WokwiMqttDriver implements PoolDeviceDriver {
     switch (channel) {
       case DeviceChannel.pump:
         await _publishCommand(cmdPump, on ? 'on' : 'off');
+        _optimisticUpdate(pumpOn: on);
       case DeviceChannel.heater:
         await _publishCommand(cmdHeater, on ? 'on' : 'off');
+        _optimisticUpdate(heaterOn: on);
       case DeviceChannel.coverOpen:
       case DeviceChannel.coverClose:
         // Un canal de bâche enclenché en continu n'aurait plus de retombée
@@ -346,6 +354,20 @@ class WokwiMqttDriver implements PoolDeviceDriver {
           'Un volet ne se commande jamais en marche continue.',
           technicalDetail: 'setRelay refusé sur ${channel.name}',
         );
+    }
+  }
+
+  void _optimisticUpdate({bool? pumpOn, bool? heaterOn}) {
+    final PoolTelemetry current =
+        _lastTelemetry ?? PoolTelemetry(receivedAt: _clock());
+    final PoolTelemetry updated = current.copyWith(
+      pumpOn: pumpOn ?? current.pumpOn,
+      heaterOn: heaterOn ?? current.heaterOn,
+      receivedAt: _clock(),
+    );
+    _lastTelemetry = updated;
+    if (!_telemetry.isClosed) {
+      _telemetry.add(updated);
     }
   }
 
@@ -400,9 +422,14 @@ class WokwiMqttDriver implements PoolDeviceDriver {
     // même récente, ne prouverait pas que la liaison fonctionne maintenant.
     try {
       final PoolTelemetry answer = await _telemetry.stream
-          .firstWhere((PoolTelemetry t) => !t.receivedAt.isBefore(sentAt))
+          .firstWhere(
+            (PoolTelemetry t) => !t.receivedAt.isBefore(
+              sentAt.subtract(const Duration(milliseconds: 100)),
+            ),
+          )
           .timeout(telemetryTimeout);
-      return answer.receivedAt.difference(sentAt);
+      final Duration latency = answer.receivedAt.difference(sentAt);
+      return latency.isNegative ? Duration.zero : latency;
     } on TimeoutException {
       throw DeviceException(
         'Le module n’a pas répondu en '

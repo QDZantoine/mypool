@@ -309,6 +309,20 @@ class _LinkSection extends ConsumerWidget {
                       .read(mqttSettingsProvider.notifier)
                       .edit(deviceId: value),
                 ),
+                _TextTile(
+                  label: 'Nom d’utilisateur (optionnel)',
+                  value: mqtt.username ?? '',
+                  onChanged: (String value) => ref
+                      .read(mqttSettingsProvider.notifier)
+                      .edit(username: value.isEmpty ? null : value),
+                ),
+                _TextTile(
+                  label: 'Mot de passe (optionnel)',
+                  value: mqtt.password ?? '',
+                  onChanged: (String value) => ref
+                      .read(mqttSettingsProvider.notifier)
+                      .edit(password: value.isEmpty ? null : value),
+                ),
                 if (mqtt.isPublicBroker)
                   Padding(
                     padding: const EdgeInsets.all(16),

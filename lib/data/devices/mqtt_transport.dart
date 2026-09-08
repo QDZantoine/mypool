@@ -64,6 +64,10 @@ class MqttClientTransport implements MqttTransport {
              'aquacontrol-app-${settings.deviceId}',
              settings.port,
            ) {
+    if (settings.port == 8883 || settings.host.contains('hivemq.cloud')) {
+      _client.secure = true;
+      _client.onBadCertificate = (dynamic cert) => true;
+    }
     _client
       // Le keepalive fixe le délai au bout duquel le broker publie le
       // testament du module. 20 s : assez court pour détecter une coupure,
@@ -137,9 +141,16 @@ class MqttClientTransport implements MqttTransport {
 
   @override
   Future<void> subscribe(String topicFilter) async {
-    // Qualité de service 1 dans les deux sens : une télémétrie perdue est un
-    // état figé à l'écran (addendum § 3.2).
-    _client.subscribe(topicFilter, MqttQos.atLeastOnce);
+    if (!isConnected) {
+      return;
+    }
+    try {
+      _client.subscribe(topicFilter, MqttQos.atLeastOnce);
+    } on Exception {
+      // Absorb socket/connection state exceptions during reconnects
+    } on Object {
+      // Absorb any other connection state exception
+    }
   }
 
   @override

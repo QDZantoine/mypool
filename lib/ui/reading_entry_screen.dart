@@ -130,6 +130,20 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
     }
   }
 
+  void _prefillFromSensors(TelemetryState telemetry) {
+    if (!telemetry.hasLiveValues) return;
+    setState(() {
+      if (telemetry.livePh != null) {
+        _controllers[WaterParameter.ph]!.text = _format(telemetry.livePh!, WaterParameter.ph);
+        _values[WaterParameter.ph] = telemetry.livePh;
+      }
+      if (telemetry.liveTemperatureC != null) {
+        _controllers[WaterParameter.temperature]!.text = _format(telemetry.liveTemperatureC!, WaterParameter.temperature);
+        _values[WaterParameter.temperature] = telemetry.liveTemperatureC;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -170,6 +184,7 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
               child: _SensorNote(
                 ph: telemetry.livePh,
                 temperatureC: telemetry.liveTemperatureC,
+                onPrefill: () => _prefillFromSensors(telemetry),
               ),
             ),
           for (final WaterParameter parameter in manual)
@@ -269,10 +284,15 @@ class _Field extends StatelessWidget {
 
 /// Ce que la sonde mesure déjà, pour qu'on ne le ressaisisse pas.
 class _SensorNote extends StatelessWidget {
-  const _SensorNote({required this.ph, required this.temperatureC});
+  const _SensorNote({
+    required this.ph,
+    required this.temperatureC,
+    this.onPrefill,
+  });
 
   final double? ph;
   final double? temperatureC;
+  final VoidCallback? onPrefill;
 
   @override
   Widget build(BuildContext context) {
@@ -285,22 +305,38 @@ class _SensorNote extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.chlorine.withValues(alpha: 0.28)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(Icons.sensors, size: 20, color: AppTheme.chlorine),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'La sonde suit le pH'
-              '${ph == null ? '' : ' (${ph!.toStringAsFixed(2).replaceAll('.', ',')})'}'
-              ' et la température'
-              '${temperatureC == null ? '' : ' (${temperatureC!.toStringAsFixed(1).replaceAll('.', ',')} °C)'}'
-              '. Rien à ressaisir.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
+          Row(
+            children: <Widget>[
+              Icon(Icons.sensors, size: 20, color: AppTheme.chlorine),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'La sonde suit le pH'
+                  '${ph == null ? '' : ' (${ph!.toStringAsFixed(2).replaceAll('.', ',')})'}'
+                  ' et la température'
+                  '${temperatureC == null ? '' : ' (${temperatureC!.toStringAsFixed(1).replaceAll('.', ',')} °C)'}'
+                  '. Rien à ressaisir.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (onPrefill != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onPrefill,
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('Pré-remplir la saisie'),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
