@@ -1,0 +1,37 @@
+name: mypool
+description: "AquaControl - gestion de piscine : chimie de l'eau, filtration, volet."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_riverpod: ^2.6.1
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  shared_preferences: ^2.3.4
+  http: ^1.2.2
+
+  # Utilisé uniquement par WokwiMqttDriver, le pilote du banc d'essai ESP32
+  # (addendum § 8, ligne « § 9.4 Dépendances »).
+  mqtt_client: ^10.11.11
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # Exécute un vrai SQLite en mémoire pendant les tests : sans lui, la couche
+  # de persistance ne serait pas testable du tout, et les requêtes ne seraient
+  # vérifiées qu'à la main sur un téléphone. Dépendance de DÉVELOPPEMENT
+  # uniquement, elle n'entre pas dans l'application livrée.
+  sqflite_common_ffi: ^2.4.2+1
+
+flutter:
+  uses-material-design: true

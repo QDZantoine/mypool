@@ -1,0 +1,6 @@
+# Bibliothèques installées automatiquement par Wokwi.
+# WiFi.h, Preferences.h et math.h font partie du cœur ESP32 :
+# elles ne se déclarent pas ici.
+
+PubSubClient
+ESP32Servo

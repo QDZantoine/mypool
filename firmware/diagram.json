@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "author": "AquaControl",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potPh",
+      "top": -120,
+      "left": -240,
+      "attrs": { "value": "2048" }
+    },
+    {
+      "type": "wokwi-ntc-temperature-sensor",
+      "id": "ntcWater",
+      "top": 60,
+      "left": -240,
+      "attrs": { "temperature": "25" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "servoCover",
+      "top": -160,
+      "left": 300,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "relayPump",
+      "top": 20,
+      "left": 300,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "relayHeater",
+      "top": 180,
+      "left": 300,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledPump",
+      "top": 30,
+      "left": 200,
+      "attrs": { "color": "blue", "label": "Pompe" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledHeater",
+      "top": 190,
+      "left": 200,
+      "attrs": { "color": "red", "label": "Chauffage" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledLink",
+      "top": 300,
+      "left": 200,
+      "attrs": { "color": "green", "label": "MQTT" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rPump",
+      "top": 30,
+      "left": 130,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rHeater",
+      "top": 190,
+      "left": 130,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rLink",
+      "top": 300,
+      "left": 130,
+      "attrs": { "value": "220" }
+    }
+  ],
+  "connections": [
+    [ "potPh:VCC", "esp:3V3", "red", [] ],
+    [ "potPh:GND", "esp:GND.1", "black", [] ],
+    [ "potPh:SIG", "esp:D34", "green", [] ],
+
+    [ "ntcWater:VCC", "esp:3V3", "red", [] ],
+    [ "ntcWater:GND", "esp:GND.1", "black", [] ],
+    [ "ntcWater:OUT", "esp:D35", "green", [] ],
+
+    [ "servoCover:V+", "esp:3V3", "red", [] ],
+    [ "servoCover:GND", "esp:GND.2", "black", [] ],
+    [ "servoCover:PWM", "esp:D18", "orange", [] ],
+
+    [ "relayPump:VCC", "esp:3V3", "red", [] ],
+    [ "relayPump:GND", "esp:GND.2", "black", [] ],
+    [ "relayPump:IN", "esp:D23", "blue", [] ],
+
+    [ "relayHeater:VCC", "esp:3V3", "red", [] ],
+    [ "relayHeater:GND", "esp:GND.2", "black", [] ],
+    [ "relayHeater:IN", "esp:D19", "purple", [] ],
+
+    [ "esp:D22", "rPump:1", "blue", [] ],
+    [ "rPump:2", "ledPump:A", "blue", [] ],
+    [ "ledPump:C", "esp:GND.1", "black", [] ],
+
+    [ "esp:D21", "rHeater:1", "red", [] ],
+    [ "rHeater:2", "ledHeater:A", "red", [] ],
+    [ "ledHeater:C", "esp:GND.1", "black", [] ],
+
+    [ "esp:D4", "rLink:1", "green", [] ],
+    [ "rLink:2", "ledLink:A", "green", [] ],
+    [ "ledLink:C", "esp:GND.1", "black", [] ]
+  ]
+}

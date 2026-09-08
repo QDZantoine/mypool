@@ -1,0 +1,21 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    # Le moteur metier doit etre explicite : un type de retour manquant cache
+    # une erreur de calcul derriere un `dynamic`.
+    always_declare_return_types: true
+    # Regle de securite du projet : aucune trace technique, aucun print.
+    avoid_print: true
+    prefer_const_constructors: true
+    prefer_final_locals: true
+    require_trailing_commas: true
+    # Les futures non attendues sont la source des ecritures materielles
+    # silencieusement perdues.
+    unawaited_futures: true
