@@ -176,8 +176,11 @@ class CoverController extends StateNotifier<CoverStatus> {
     if (_direction == CoverMotion.idle && _holdTimer == null) {
       return;
     }
-    _integrate();
+    // La répétition est coupée AVANT toute mise à jour d'état : c'est elle
+    // qui porte la sécurité, et elle ne doit pas dépendre du bon déroulement
+    // d'un rafraîchissement d'affichage.
     _stopRepeating();
+    _integrateFrom(_movingSinceBeforeStop);
     _direction = CoverMotion.idle;
     state = state.copyWith(
       cover: state.cover.copyWith(motion: CoverMotion.idle),
@@ -261,8 +264,9 @@ class CoverController extends StateNotifier<CoverStatus> {
   /// lesquelles le matériel continue seul après le relâchement. L'erreur est
   /// volontairement de ce côté : elle fait annoncer un volet MOINS fermé qu'il
   /// ne l'est, jamais l'inverse.
-  void _integrate() {
-    final DateTime? since = _movingSince;
+  void _integrate() => _integrateFrom(_movingSince);
+
+  void _integrateFrom(DateTime? since) {
     if (since == null || _direction == CoverMotion.idle) {
       return;
     }
@@ -293,7 +297,15 @@ class CoverController extends StateNotifier<CoverStatus> {
     );
   }
 
+  /// Instant de dernière intégration, conservé pendant l'arrêt.
+  ///
+  /// [_stopRepeating] efface [_movingSince] parce que plus rien ne bouge ;
+  /// mais le dernier fragment de mouvement doit encore être intégré, d'où
+  /// cette copie.
+  DateTime? _movingSinceBeforeStop;
+
   void _stopRepeating() {
+    _movingSinceBeforeStop = _movingSince;
     _holdTimer?.cancel();
     _holdTimer = null;
     _movingSince = null;

@@ -17,40 +17,97 @@ import 'water_readings_controller.dart';
 /// et appellent un moteur pur. C'est ce qui permet de vérifier les calculs
 /// sans Riverpod, et de vérifier le câblage sans refaire les calculs.
 
+/// Les paramètres qu'une sonde mesure en continu.
+///
+/// La liste est courte, et c'est une réalité du matériel : le montage remonte
+/// un pH et une température, rien de plus. Il n'existe pas de sonde
+/// domestique de TAC, de TH ni de stabilisant — ces valeurs se lisent à la
+/// bandelette. Le chlore se sonde (redox), mais pas sur ce montage.
+///
+/// L'interface s'appuie sur cette liste pour dire à l'utilisateur ce qui est
+/// suivi tout seul et ce qu'il doit encore tester lui-même.
+const List<WaterParameter> sensorParameters = <WaterParameter>[
+  WaterParameter.ph,
+  WaterParameter.temperature,
+];
+
+/// Les paramètres qui ne se mesurent qu'à la main.
+final Provider<List<WaterParameter>> manualParametersProvider =
+    Provider<List<WaterParameter>>((Ref ref) {
+      final PoolConfig config = ref.watch(poolConfigProvider);
+      return <WaterParameter>[
+        if (config.usesChlorine) WaterParameter.freeChlorine,
+        if (config.usesChlorine) WaterParameter.combinedChlorine,
+        WaterParameter.tac,
+        WaterParameter.th,
+        if (config.usesChlorine) WaterParameter.stabilizer,
+        if (config.treatment == TreatmentType.salt) WaterParameter.salt,
+      ];
+    });
+
 /// La mesure de référence pour les recommandations.
 ///
-/// La base est la dernière SAISIE de l'utilisateur, et non la mesure la plus
-/// récente : la sonde s'enregistre toute seule et serait presque toujours la
-/// plus récente, ce qui masquerait la bandelette qu'on vient de lire. Une
-/// sonde ne mesure d'ailleurs ni le TAC, ni le TH, ni le stabilisant, dont
-/// dépendent la plupart des doses.
+/// LA SONDE FAIT FOI pour ce qu'elle mesure. Une lecture de sonde de deux
+/// secondes décrit l'eau telle qu'elle est maintenant ; une bandelette lue
+/// dimanche dernier décrit l'eau de dimanche dernier. Doser un pH sur une
+/// valeur de la semaine passée fait verser à côté.
 ///
-/// La télémétrie ne complète que ce que la saisie ne dit pas.
+/// La saisie apporte tout le reste — TAC, TH, stabilisant, chlore, sel — que
+/// nulle sonde de ce montage ne mesure, et sans quoi le moteur de dosage n'a
+/// pas ses entrées : c'est le TAC qui fixe la dose de pH et le stabilisant qui
+/// fixe la cible de chlore.
+///
+/// Quand la sonde est hors ligne ou sa trame périmée, la saisie reprend la
+/// main : mieux vaut une valeur datée dont on connaît l'âge qu'aucune valeur.
 final Provider<WaterReading?> effectiveReadingProvider =
     Provider<WaterReading?>((Ref ref) {
-      final WaterReading? recorded = ref.watch(
+      final WaterReading? entered = ref.watch(
         readingsProvider.select((ReadingsState s) => s.latestManual),
       );
       final TelemetryState telemetry = ref.watch(telemetryProvider);
 
       if (!telemetry.hasLiveValues) {
-        return recorded;
+        return entered;
       }
-      if (recorded == null) {
-        // Rien de saisi : on affiche ce que la sonde dit, marqué comme tel.
+      final double? livePh = telemetry.livePh;
+      final double? liveTemperature = telemetry.liveTemperatureC;
+
+      if (entered == null) {
+        // Rien de saisi : on travaille avec ce que la sonde donne, marqué
+        // comme venant d'elle.
         return WaterReading(
           takenAt: telemetry.telemetry!.receivedAt,
-          ph: telemetry.livePh,
-          temperature: telemetry.liveTemperatureC,
+          ph: livePh,
+          temperature: liveTemperature,
           source: MeasurementSource.sensor,
         );
       }
-      // Les valeurs de sonde ne remplacent que ce qui manque à la saisie.
-      return recorded.copyWith(
-        ph: recorded.ph ?? telemetry.livePh,
-        temperature: recorded.temperature ?? telemetry.liveTemperatureC,
+
+      // La sonde ÉCRASE le pH et la température saisis : ils décrivent l'eau
+      // maintenant. `copyWith` ne sait pas remettre une valeur à null, d'où la
+      // reconstruction explicite.
+      return WaterReading(
+        takenAt: telemetry.telemetry!.receivedAt,
+        ph: livePh ?? entered.ph,
+        temperature: liveTemperature ?? entered.temperature,
+        freeChlorine: entered.freeChlorine,
+        combinedChlorine: entered.combinedChlorine,
+        tac: entered.tac,
+        th: entered.th,
+        stabilizer: entered.stabilizer,
+        salt: entered.salt,
+        note: entered.note,
+        source: MeasurementSource.sensor,
       );
     });
+
+/// La dernière saisie, telle quelle, pour afficher son âge.
+final Provider<WaterReading?> lastEnteredReadingProvider =
+    Provider<WaterReading?>(
+      (Ref ref) => ref.watch(
+        readingsProvider.select((ReadingsState s) => s.latestManual),
+      ),
+    );
 
 /// Les actions à mener, dans l'ordre métier (annexe A.2 à A.5).
 ///
@@ -80,9 +137,7 @@ final Provider<WaterBalanceResult?> waterBalanceProvider =
 
 /// Température de l'eau retenue pour la filtration.
 ///
-/// La sonde passe devant la saisie ici, contrairement aux recommandations : la
-/// durée de filtration suit la température du jour, et une mesure d'il y a
-/// trois jours ne la décrit plus.
+/// Même règle que partout : la sonde d'abord, la saisie en secours.
 final Provider<double?> waterTemperatureProvider = Provider<double?>((Ref ref) {
   final TelemetryState telemetry = ref.watch(telemetryProvider);
   final double? live = telemetry.liveTemperatureC;

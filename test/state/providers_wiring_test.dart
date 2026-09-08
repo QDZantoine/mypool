@@ -131,7 +131,7 @@ void main() {
       expect(container.read(readingsProvider).latestSensor?.ph, 7.24);
     });
 
-    test('la télémétrie complète ce que la saisie ne dit pas', () async {
+    test('la sonde fait foi sur le pH, la saisie apporte le reste', () async {
       await bootstrap(container);
 
       // Une saisie sans température.
@@ -141,13 +141,39 @@ void main() {
       await deliver(_telemetry(ph: 7.24, tempC: 26.4));
 
       final WaterReading? effective = container.read(effectiveReadingProvider);
-      // La saisie fait foi sur le pH : c'est l'utilisateur qui a lu la
-      // bandelette.
-      expect(effective?.ph, 7.9);
-      // Mais la sonde comble la température manquante.
+      // La SONDE fait foi sur le pH : sa lecture a deux secondes, la saisie
+      // décrit l'eau d'un autre moment. Doser sur la valeur périmée ferait
+      // verser à côté.
+      expect(effective?.ph, 7.24);
       expect(effective?.temperature, 26.4);
+      // Le TAC saisi est conservé : aucune sonde ne le mesure, et c'est lui
+      // qui fixe la dose de pH.
+      expect(effective?.tac, 100.0);
       // Et le planning de filtration en découle : 26,4 / 2 = 13,2 h = 792 min.
       expect(container.read(filtrationPlanProvider)?.recommendedMinutes, 792);
+    });
+
+    test('une sonde partielle laisse la saisie combler le trou', () async {
+      // Cas réel : la sonde pH est débranchée mais le NTC répond. La trame
+      // arrive donc avec une température et sans pH.
+      await bootstrap(container);
+      await container
+          .read(readingsProvider.notifier)
+          .record(WaterReading(takenAt: _start, ph: 7.6, tac: 100.0));
+      await deliver(
+        jsonEncode(<String, dynamic>{
+          'deviceId': 'a7f3c1e9b2xx',
+          'tempC': 24.0,
+        }),
+      );
+
+      final WaterReading? effective = container.read(effectiveReadingProvider);
+      // La sonde impose la température qu'elle mesure.
+      expect(effective?.temperature, 24.0);
+      // Et le pH saisi reste, faute de mieux : mieux vaut une valeur datée
+      // dont on connaît l'âge qu'aucune valeur.
+      expect(effective?.ph, 7.6);
+      expect(effective?.tac, 100.0);
     });
 
     test('sans saisie, la télémétrie devient la mesure de référence', () async {
