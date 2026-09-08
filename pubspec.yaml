@@ -21,6 +21,7 @@ dependencies:
   # (addendum § 8, ligne « § 9.4 Dépendances »).
   mqtt_client: ^10.11.11
   geolocator: ^14.0.3
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -36,3 +37,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env
+

@@ -78,6 +78,34 @@ class WeatherPage extends ConsumerWidget {
   }
 }
 
+String _formatWeatherErrorMessage(Object error) {
+  final msg = error.toString().toLowerCase();
+
+  if (msg.contains('permission') ||
+      msg.contains('refusé') ||
+      msg.contains('refusée') ||
+      msg.contains('denied')) {
+    return "Vous devez accorder à l'application l'accès à votre géolocalisation.";
+  }
+
+  if (msg.contains('désactivé') ||
+      msg.contains('service') ||
+      msg.contains('disabled')) {
+    return "Les services de géolocalisation sont désactivés. Veuillez les activer sur votre appareil.";
+  }
+
+  if (msg.contains('connexion') ||
+      msg.contains('socketexception') ||
+      msg.contains('http') ||
+      msg.contains('network') ||
+      msg.contains('weatherexception') ||
+      msg.contains('erreur lors de la connexion')) {
+    return "Une erreur est survenue. Veuillez vérifier votre connexion.";
+  }
+
+  return "Une erreur est survenue. Veuillez vérifier votre connexion.";
+}
+
 class _HeaderCard extends ConsumerWidget {
   const _HeaderCard();
 
@@ -145,7 +173,7 @@ class _HeaderCard extends ConsumerWidget {
                       ),
                     ),
                     error: (err, _) => Text(
-                      'Position non disponible',
+                      _formatWeatherErrorMessage(err),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                         fontWeight: FontWeight.w600,
@@ -205,16 +233,89 @@ class _WeatherSection extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 24.0),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (err, stack) => Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'Erreur : $err',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
+              error: (err, stack) => _ErrorCard(error: err),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ErrorCard extends ConsumerWidget {
+  const _ErrorCard({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final formattedMessage = _formatWeatherErrorMessage(error);
+    final isPermissionError = formattedMessage.contains('accorder') ||
+        formattedMessage.contains('géolocalisation');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isPermissionError
+                    ? Icons.location_off_outlined
+                    : Icons.wifi_off_rounded,
+                color: theme.colorScheme.error,
+                size: 26,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isPermissionError
+                      ? 'Accès géolocalisation requis'
+                      : 'Erreur de connexion',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            formattedMessage,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(120, 38),
+                foregroundColor: theme.colorScheme.error,
+                side: BorderSide(color: theme.colorScheme.error),
+              ),
+              onPressed: () {
+                ref.invalidate(userPositionProvider);
+                ref.invalidate(currentWeatherCoordinatesProvider);
+                ref.invalidate(alertWeatherCoordinatesProvider);
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Réessayer', style: TextStyle(fontSize: 14)),
+            ),
+          ),
+        ],
       ),
     );
   }
