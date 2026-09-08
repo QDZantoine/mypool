@@ -9,6 +9,7 @@ import '../data/devices/unavailable_driver.dart';
 import '../data/devices/wokwi_mqtt_driver.dart';
 import '../data/readings_database.dart';
 import '../data/settings_store.dart';
+import '../services/weather-service.dart';
 import '../models/mqtt_settings.dart';
 import '../models/pool_config.dart';
 import '../models/water_reading.dart';
@@ -40,6 +41,14 @@ final Provider<ReadingsRepository> readingsRepositoryProvider =
       final ReadingsDatabase database = ReadingsDatabase();
       ref.onDispose(() => unawaited(database.close()));
       return database;
+    });
+
+/// Service Météo.
+final Provider<WeatherService> weatherServiceProvider =
+    Provider<WeatherService>((Ref ref) {
+      final WeatherService service = WeatherService();
+      ref.onDispose(service.dispose);
+      return service;
     });
 
 // ---------------------------------------------------------------------------

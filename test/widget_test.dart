@@ -6,6 +6,10 @@ import 'package:mypool/data/settings_store.dart';
 import 'package:mypool/state/providers.dart';
 import 'package:mypool/ui/app.dart';
 import 'package:mypool/ui/home_screen.dart';
+import 'package:mypool/services/weather-service.dart';
+import 'package:mypool/state/providers.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 /// Démarrage de l'application, de bout en bout.
 ///
