@@ -20,6 +20,7 @@ dependencies:
   # Utilisé uniquement par WokwiMqttDriver, le pilote du banc d'essai ESP32
   # (addendum § 8, ligne « § 9.4 Dépendances »).
   mqtt_client: ^10.11.11
+  geolocator: ^14.0.3
 
 dev_dependencies:
   flutter_test:
