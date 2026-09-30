@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mypool/core/connection_notifier.dart';
 import 'package:mypool/data/devices/pool_device_driver.dart';
 import 'package:mypool/data/devices/simulation_driver.dart';
 import 'package:mypool/data/readings_database.dart';
@@ -282,6 +283,75 @@ void main() {
       // Une phrase en français, sans trace technique.
       expect(find.textContaining('Le module ne répond pas'), findsOneWidget);
       expect(find.textContaining('Exception'), findsNothing);
+    });
+
+    testWidgets('affiche le message de connexion internet si le réseau est KO', (
+      WidgetTester tester,
+    ) async {
+      usePhoneViewport(tester);
+      await tester.pumpWidget(build(config: consented()));
+      await tester.pumpAndSettle();
+
+      container
+          .read(connectionNotifierProvider.notifier)
+          .updateMqttStatus(isOnline: false, isMqttReady: true);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Commander'), findsNothing);
+      expect(find.byType(HoldButton), findsNothing);
+      expect(
+        find.textContaining('vérifier votre connexion internet'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('affiche les commandes si la connexion internet est OK', (
+      WidgetTester tester,
+    ) async {
+      usePhoneViewport(tester);
+      await tester.pumpWidget(build(config: consented()));
+      await tester.pumpAndSettle();
+
+      container
+          .read(connectionNotifierProvider.notifier)
+          .updateMqttStatus(isOnline: true, isMqttReady: false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('COMMANDER'), findsOneWidget);
+      expect(find.byType(HoldButton), findsNWidgets(2));
+    });
+
+    testWidgets('lors du retour du réseau, le message disparait automatiquement sans toucher aux boutons', (
+      WidgetTester tester,
+    ) async {
+      usePhoneViewport(tester);
+      await tester.pumpWidget(build(config: consented()));
+      await tester.pumpAndSettle();
+
+      // Perte de connexion (mode avion)
+      container
+          .read(connectionNotifierProvider.notifier)
+          .updateMqttStatus(isOnline: false, isMqttReady: false);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Problème de connexion'),
+        findsOneWidget,
+      );
+
+      // Retour de la connexion (mode avion désactivé)
+      container
+          .read(connectionNotifierProvider.notifier)
+          .updateMqttStatus(isOnline: true, isMqttReady: true);
+      await tester.pumpAndSettle();
+
+      // Le message doit disparaître automatiquement et les boutons réapparaître
+      expect(
+        find.textContaining('Problème de connexion'),
+        findsNothing,
+      );
+      expect(find.text('COMMANDER'), findsOneWidget);
+      expect(find.byType(HoldButton), findsNWidgets(2));
     });
   });
 }

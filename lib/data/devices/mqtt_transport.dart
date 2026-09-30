@@ -55,32 +55,36 @@ class MqttClientTransport implements MqttTransport {
     required MqttSettings settings,
     MqttServerClient? client,
   }) : _settings = settings,
-       _client =
-           client ??
-           MqttServerClient.withPort(
-             settings.host,
-             // Identifiant de session unique : deux clients qui partagent le
-             // même identifiant se déconnectent mutuellement en boucle.
-             'aquacontrol-app-${settings.deviceId}',
-             settings.port,
-           ) {
-    if (settings.port == 8883 || settings.host.contains('hivemq.cloud')) {
-      _client.secure = true;
-      _client.onBadCertificate = (dynamic cert) => true;
-    }
-    _client
-      // Le keepalive fixe le délai au bout duquel le broker publie le
-      // testament du module. 20 s : assez court pour détecter une coupure,
-      // assez long pour ne pas battre inutilement.
-      ..keepAlivePeriod = 20
-      ..autoReconnect =
-          false // la reconnexion est orchestrée par le pilote
-      ..onDisconnected = _handleDisconnected
-      ..onConnected = _handleConnected;
+       _customClient = client,
+       _client = client ?? _buildClient(settings) {
+    _configureClient(_client);
   }
 
   final MqttSettings _settings;
-  final MqttServerClient _client;
+  final MqttServerClient? _customClient;
+  MqttServerClient _client;
+
+  static MqttServerClient _buildClient(MqttSettings settings) {
+    final String clientId =
+        'aquacontrol-app-${settings.deviceId}-${DateTime.now().millisecondsSinceEpoch}';
+    final MqttServerClient client = MqttServerClient.withPort(
+      settings.host,
+      clientId,
+      settings.port,
+    );
+    if (settings.port == 8883 || settings.host.contains('hivemq.cloud')) {
+      client.secure = true;
+      client.onBadCertificate = (dynamic cert) => true;
+    }
+    client.keepAlivePeriod = 20;
+    client.autoReconnect = false;
+    return client;
+  }
+
+  void _configureClient(MqttServerClient client) {
+    client.onDisconnected = _handleDisconnected;
+    client.onConnected = _handleConnected;
+  }
 
   final StreamController<MqttInbound> _messages =
       StreamController<MqttInbound>.broadcast();
@@ -100,10 +104,26 @@ class MqttClientTransport implements MqttTransport {
 
   @override
   Future<void> connect() async {
+    if (isConnected) {
+      return;
+    }
+    await _updates?.cancel();
+    _updates = null;
+
+    if (_customClient == null) {
+      try {
+        _client.disconnect();
+      } catch (_) {}
+      _client = _buildClient(_settings);
+      _configureClient(_client);
+    }
+
     try {
       await _client.connect(_settings.username, _settings.password);
-    } on Exception catch (error) {
-      _client.disconnect();
+    } catch (error) {
+      try {
+        _client.disconnect();
+      } catch (_) {}
       throw DeviceException(
         'Impossible de joindre le broker ${_settings.host}.',
         technicalDetail: '$error',
@@ -115,7 +135,19 @@ class MqttClientTransport implements MqttTransport {
         technicalDetail: '${_client.connectionStatus}',
       );
     }
-    _updates ??= _client.updates?.listen(_handleUpdates);
+
+    _subscribeToUpdates();
+  }
+
+  void _subscribeToUpdates() {
+    if (_updates == null && _client.updates != null) {
+      _updates = _client.updates!.listen(
+        _handleUpdates,
+        onError: (Object error) {
+          _handleDisconnected();
+        },
+      );
+    }
   }
 
   void _handleUpdates(List<MqttReceivedMessage<MqttMessage>> events) {
@@ -132,10 +164,13 @@ class MqttClientTransport implements MqttTransport {
   }
 
   void _handleConnected() {
+    _subscribeToUpdates();
     _connection.add(true);
   }
 
   void _handleDisconnected() {
+    unawaited(_updates?.cancel());
+    _updates = null;
     _connection.add(false);
   }
 
@@ -146,10 +181,8 @@ class MqttClientTransport implements MqttTransport {
     }
     try {
       _client.subscribe(topicFilter, MqttQos.atLeastOnce);
-    } on Exception {
+    } catch (_) {
       // Absorb socket/connection state exceptions during reconnects
-    } on Object {
-      // Absorb any other connection state exception
     }
   }
 
@@ -159,14 +192,21 @@ class MqttClientTransport implements MqttTransport {
     String payload, {
     bool retain = false,
   }) async {
-    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()
-      ..addString(payload);
-    _client.publishMessage(
-      topic,
-      MqttQos.atLeastOnce,
-      builder.payload!,
-      retain: retain,
-    );
+    try {
+      final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder()
+        ..addString(payload);
+      _client.publishMessage(
+        topic,
+        MqttQos.atLeastOnce,
+        builder.payload!,
+        retain: retain,
+      );
+    } catch (error) {
+      throw DeviceException(
+        'La commande n’a pas pu être envoyée au module.',
+        technicalDetail: '$topic=$payload : $error',
+      );
+    }
   }
 
   @override

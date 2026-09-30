@@ -125,6 +125,9 @@ class WokwiMqttDriver implements PoolDeviceDriver {
         technicalDetail: 'settings=$_settings',
       );
     }
+    if (_transport.isConnected) {
+      return;
+    }
 
     _messages ??= _transport.messages.listen(_handleMessage);
     _connection ??= _transport.connectionChanges.listen(
@@ -182,7 +185,7 @@ class WokwiMqttDriver implements PoolDeviceDriver {
         await _subscribeState();
         _reconnectAttempt = 0;
         return;
-      } on DeviceException {
+      } catch (_) {
         // Broker toujours injoignable : on retente, plus lentement.
         continue;
       }
@@ -277,8 +280,8 @@ class WokwiMqttDriver implements PoolDeviceDriver {
       throw const DeviceException('La liaison au module a été fermée.');
     }
     if (!_transport.isConnected) {
-      throw DeviceException(
-        'Pas de liaison avec le broker ${_settings.host}.',
+      throw const DeviceException(
+        'Un problème est survenu, vérifier votre connexion internet.',
         technicalDetail: 'transport déconnecté',
       );
     }

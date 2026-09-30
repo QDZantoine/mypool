@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/connection_notifier.dart';
 import '../data/devices/mqtt_transport.dart';
 import '../data/devices/pool_device_driver.dart';
 import '../data/devices/simulation_driver.dart';
@@ -233,4 +234,5 @@ Future<void> bootstrap(ProviderContainer container) async {
   await container.read(poolConfigProvider.notifier).load();
   await container.read(readingsProvider.notifier).load();
   await container.read(telemetryProvider.notifier).start();
+  container.read(connectionNotifierProvider.notifier).startMonitoring();
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/connection_notifier.dart';
 import '../models/cover_state.dart';
 import '../models/pool_config.dart';
 import '../state/cover_controller.dart';
@@ -27,9 +28,12 @@ class CoverScreen extends ConsumerWidget {
     final CoverController controller = ref.read(
       coverControllerProvider.notifier,
     );
+    final ConnectionQuality connectionQuality =
+        ref.watch(connectionNotifierProvider);
+    final bool isConnectionOk = connectionQuality == ConnectionQuality.online;
 
     final bool canOperate =
-        config.safetyConsentGiven && config.hasMotorisedCover;
+        isConnectionOk && config.safetyConsentGiven && config.hasMotorisedCover;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -62,58 +66,67 @@ class CoverScreen extends ConsumerWidget {
             },
           ),
         ],
-        if (status.errorMessage != null) ...<Widget>[
+        if (!isConnectionOk) ...<Widget>[
           const SizedBox(height: 12),
           _Notice(
             icon: Icons.wifi_off,
             color: AppTheme.acid,
-            text: status.errorMessage!,
+            text: connectionQuality.userNoticeMessage!,
+          ),
+        ] else ...<Widget>[
+          if (status.errorMessage != null) ...<Widget>[
+            const SizedBox(height: 12),
+            _Notice(
+              icon: Icons.wifi_off,
+              color: AppTheme.acid,
+              text: status.errorMessage!,
+            ),
+          ],
+          const SectionHeader(label: 'Commander'),
+          Padding(
+            padding: EdgeInsets.zero,
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: HoldButton(
+                    label: 'Ouvrir',
+                    icon: Icons.keyboard_double_arrow_up,
+                    enabled: canOperate,
+                    color: AppTheme.chlorine,
+                    disabledExplanation: canOperate
+                        ? null
+                        : 'Avertissement à accepter',
+                    // Doigt posé : la commande part et se répète.
+                    onPressStart: () => controller.pressOpen(),
+                    // Doigt relevé : la répétition s'arrête. Aucun ordre
+                    // d'arrêt n'est envoyé, le matériel s'arrête seul.
+                    onPressEnd: () => controller.release(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: HoldButton(
+                    label: 'Fermer',
+                    icon: Icons.keyboard_double_arrow_down,
+                    enabled: canOperate,
+                    color: AppTheme.chlorine,
+                    disabledExplanation: canOperate
+                        ? null
+                        : 'Avertissement à accepter',
+                    onPressStart: () => controller.pressClose(),
+                    onPressEnd: () => controller.release(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Doigt appuyé pendant tout le mouvement, bassin sous les yeux. '
+            'Au relâchement, le volet s’arrête en moins de deux secondes.',
+            style: theme.textTheme.bodyLarge,
           ),
         ],
-        const SectionHeader(label: 'Commander'),
-        Padding(
-          padding: EdgeInsets.zero,
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: HoldButton(
-                  label: 'Ouvrir',
-                  icon: Icons.keyboard_double_arrow_up,
-                  enabled: canOperate,
-                  color: AppTheme.chlorine,
-                  disabledExplanation: canOperate
-                      ? null
-                      : 'Avertissement à accepter',
-                  // Doigt posé : la commande part et se répète.
-                  onPressStart: () => controller.pressOpen(),
-                  // Doigt relevé : la répétition s'arrête. Aucun ordre
-                  // d'arrêt n'est envoyé, le matériel s'arrête seul.
-                  onPressEnd: () => controller.release(),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: HoldButton(
-                  label: 'Fermer',
-                  icon: Icons.keyboard_double_arrow_down,
-                  enabled: canOperate,
-                  color: AppTheme.chlorine,
-                  disabledExplanation: canOperate
-                      ? null
-                      : 'Avertissement à accepter',
-                  onPressStart: () => controller.pressClose(),
-                  onPressEnd: () => controller.release(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Doigt appuyé pendant tout le mouvement, bassin sous les yeux. '
-          'Au relâchement, le volet s’arrête en moins de deux secondes.',
-          style: theme.textTheme.bodyLarge,
-        ),
         const SectionHeader(label: 'Recaler'),
         _CalibrationCard(
           enabled: canOperate && !status.isMoving,

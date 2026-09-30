@@ -520,7 +520,7 @@ void main() {
           isA<DeviceException>().having(
             (DeviceException e) => e.message,
             'message',
-            contains('Pas de liaison'),
+            contains('connexion'),
           ),
         ),
       );

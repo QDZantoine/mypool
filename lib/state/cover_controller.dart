@@ -352,6 +352,13 @@ class CoverController extends StateNotifier<CoverStatus> {
     }
   }
 
+  /// Efface le message d'erreur d'affichage.
+  void clearError() {
+    if (state.errorMessage != null) {
+      state = state.copyWith(clearError: true);
+    }
+  }
+
   @override
   void dispose() {
     _stopRepeating();

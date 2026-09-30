@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/readings_database.dart';
+import '../models/ph_history_entry.dart';
 import '../models/water_reading.dart';
+import '../services/node_red_service.dart';
 import '../state/providers.dart';
 import '../state/water_readings_controller.dart';
 import 'theme.dart';
@@ -22,7 +26,99 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  static const int _maxInfluxItems = 10;
+
   WaterParameter _shown = WaterParameter.ph;
+  List<PhHistoryEntry> _influxPhEntries = <PhHistoryEntry>[];
+  bool _isLoadingInflux = false;
+  Timer? _influxTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInfluxHistory();
+    _startInfluxTimer();
+  }
+
+  @override
+  void dispose() {
+    _influxTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startInfluxTimer() {
+    _influxTimer?.cancel();
+    _influxTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      _fetchPeriodicInfluxUpdate();
+    });
+  }
+
+  Future<void> _loadInfluxHistory() async {
+    setState(() => _isLoadingInflux = true);
+    final List<PhHistoryEntry> entries =
+        await NodeRedService().fetchAndLogPhHistory();
+    if (mounted) {
+      final List<PhHistoryEntry> sampledEntries =
+          NodeRedService.filterLastEntriesSpacedBy(
+        entries,
+        maxCount: _maxInfluxItems,
+        minInterval: const Duration(minutes: 5),
+      );
+      setState(() {
+        _influxPhEntries = sampledEntries;
+        _isLoadingInflux = false;
+      });
+    }
+  }
+
+  Future<void> _fetchPeriodicInfluxUpdate() async {
+    final PhHistoryEntry? latestEntry =
+        await NodeRedService().fetchLatestPhHistoryEntry();
+    if (!mounted || latestEntry == null) return;
+
+    if (_influxPhEntries.isNotEmpty &&
+        _influxPhEntries.last.timestamp == latestEntry.timestamp) {
+      return;
+    }
+
+    setState(() {
+      final List<PhHistoryEntry> updated =
+          List<PhHistoryEntry>.from(_influxPhEntries);
+      updated.add(latestEntry);
+      while (updated.length > _maxInfluxItems) {
+        updated.removeAt(0);
+      }
+      _influxPhEntries = updated;
+    });
+  }
+
+  Future<void> _testInfluxDbCall() async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Interrogation Node-RED / InfluxDB...')),
+    );
+    await _loadInfluxHistory();
+    _startInfluxTimer();
+    messenger.hideCurrentSnackBar();
+    if (!mounted) return;
+    if (_influxPhEntries.isNotEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '✅ ${_influxPhEntries.length} mesures pH InfluxDB affichées sur le graphique',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('❌ Aucune donnée InfluxDB récupérée (vérifier Node-RED)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   /// Les paramètres dont une courbe a du sens.
   ///
@@ -44,18 +140,45 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
     // L'ordre d'affichage de la courbe est chronologique, l'inverse de la
     // liste : une courbe se lit de gauche à droite.
-    final List<HistoryPoint> points = state.recent.reversed
-        .map((StoredReading stored) {
-          final double? value = stored.reading.valueOf(_shown);
-          return value == null
-              ? null
-              : HistoryPoint(stored.reading.takenAt.toLocal(), value);
-        })
-        .whereType<HistoryPoint>()
-        .toList(growable: false);
+    final List<HistoryPoint> points;
+    final bool isUsingInfluxForPh =
+        _shown == WaterParameter.ph && _influxPhEntries.isNotEmpty;
+
+    if (isUsingInfluxForPh) {
+      final List<PhHistoryEntry> sorted = List<PhHistoryEntry>.from(_influxPhEntries)
+        ..sort((PhHistoryEntry a, PhHistoryEntry b) => a.timestamp.compareTo(b.timestamp));
+      points = sorted
+          .map((PhHistoryEntry e) => HistoryPoint(e.timestamp.toLocal(), e.ph))
+          .toList(growable: false);
+    } else {
+      points = state.recent.reversed
+          .map((StoredReading stored) {
+            final double? value = stored.reading.valueOf(_shown);
+            return value == null
+                ? null
+                : HistoryPoint(stored.reading.takenAt.toLocal(), value);
+          })
+          .whereType<HistoryPoint>()
+          .toList(growable: false);
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historique')),
+      appBar: AppBar(
+        title: const Text('Historique'),
+        actions: <Widget>[
+          IconButton(
+            icon: _isLoadingInflux
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            tooltip: 'Actualiser depuis InfluxDB',
+            onPressed: _testInfluxDbCall,
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: <Widget>[

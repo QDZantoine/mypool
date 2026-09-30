@@ -265,7 +265,7 @@ void main() {
         controller.testConnection(),
         throwsA(isA<DeviceException>()),
       );
-      expect(controller.state.errorMessage, contains('liaison'));
+      expect(controller.state.errorMessage, contains('connexion'));
     });
   });
 
