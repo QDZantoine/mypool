@@ -6,7 +6,7 @@ import 'package:mypool/data/devices/telemetry.dart';
 final DateTime _receivedAt = DateTime.utc(2026, 7, 15, 10, 30);
 
 void main() {
-  /// Trame de référence, copiée du § 3.1 de l'addendum.
+
   const String reference = '''
 {
   "deviceId": "a7f3c1e9b2",
@@ -99,15 +99,13 @@ void main() {
         'deviceId': 'abc',
       }, receivedAt: _receivedAt);
 
-      // Un pH à zéro serait une eau d'acide de batterie : l'absence doit
-      // rester une absence.
       expect(telemetry.ph, isNull);
       expect(telemetry.temperatureC, isNull);
       expect(telemetry.coverPosition, isNull);
       expect(telemetry.pumpOn, isNull);
       expect(telemetry.heaterOn, isNull);
       expect(telemetry.hasNoMeasurement, isTrue);
-      // Les défauts sûrs, en revanche, s'appliquent.
+
       expect(telemetry.coverMotion, TelemetryMotion.idle);
       expect(telemetry.coverEstimated, isTrue);
       expect(telemetry.filterAlert, isFalse);
@@ -124,8 +122,7 @@ void main() {
     });
 
     test('un firmware plus récent peut ajouter des champs', () {
-      // Les champs inconnus sont simplement ignorés : une mise à jour du
-      // firmware ne doit pas casser une version antérieure de l'application.
+
       final PoolTelemetry telemetry = PoolTelemetry.fromJson(<String, dynamic>{
         'ph': 7.2,
         'orp': 650,
@@ -165,8 +162,7 @@ void main() {
     });
 
     test('les valeurs hors du domaine physique deviennent absentes', () {
-      // Une valeur écrasée au maximum passerait pour une mesure ; une valeur
-      // absente se voit à l'écran.
+
       final PoolTelemetry telemetry = PoolTelemetry.fromJson(<String, dynamic>{
         'ph': 900.0,
         'tempC': -300.0,
@@ -191,7 +187,7 @@ void main() {
     });
 
     test('un mouvement inconnu retombe sur l’arrêt', () {
-      // Le défaut sûr : on ne suppose jamais un mouvement en cours.
+
       final PoolTelemetry telemetry = PoolTelemetry.fromJson(<String, dynamic>{
         'cover': <String, dynamic>{'motion': 'tournoie'},
       }, receivedAt: _receivedAt);
@@ -216,7 +212,7 @@ void main() {
     });
 
     test('une position estimée ne se devine pas', () {
-      // Sans `false` explicite, la position reste présentée comme estimée.
+
       expect(
         PoolTelemetry.fromJson(<String, dynamic>{
           'cover': <String, dynamic>{'estimated': 'non'},

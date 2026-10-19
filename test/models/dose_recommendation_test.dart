@@ -30,24 +30,24 @@ DoseRecommendation _action({
 void main() {
   group('formatage des quantités', () {
     test('les cas de référence du cahier des charges', () {
-      // Sous 1 000 g : entier, en grammes.
+
       expect(DoseRecommendation.formatQuantity(250.0, DoseUnit.gram), '250 g');
-      // Au-dessus : kilogrammes, deux décimales, virgule décimale.
+
       expect(
         DoseRecommendation.formatQuantity(1440.0, DoseUnit.gram),
         '1,44 kg',
       );
-      // Sous 1 000 ml : entier, en millilitres.
+
       expect(
         DoseRecommendation.formatQuantity(400.0, DoseUnit.milliliter),
         '400 ml',
       );
-      // Au-dessus : litres, zéros de fin supprimés (1,5 et non 1,50).
+
       expect(
         DoseRecommendation.formatQuantity(1500.0, DoseUnit.milliliter),
         '1,5 L',
       );
-      // Renouvellement d’eau : metres cubes au dixieme.
+
       expect(
         DoseRecommendation.formatQuantity(15.0, DoseUnit.cubicMeter),
         '15 m³',
@@ -56,7 +56,7 @@ void main() {
 
     test('bascule exactement à 1 000', () {
       expect(DoseRecommendation.formatQuantity(999.0, DoseUnit.gram), '999 g');
-      // 1 000 / 1 000 = 1, sans décimale inutile.
+
       expect(DoseRecommendation.formatQuantity(1000.0, DoseUnit.gram), '1 kg');
       expect(
         DoseRecommendation.formatQuantity(1000.0, DoseUnit.milliliter),
@@ -65,32 +65,32 @@ void main() {
     });
 
     test('arrondis', () {
-      // 111,111 g -> 111 g
+
       expect(
         DoseRecommendation.formatQuantity(111.111, DoseUnit.gram),
         '111 g',
       );
-      // 714,286 g -> 714 g
+
       expect(
         DoseRecommendation.formatQuantity(714.286, DoseUnit.gram),
         '714 g',
       );
-      // 4 166,667 ml / 1 000 = 4,166 67 -> 4,17 L
+
       expect(
         DoseRecommendation.formatQuantity(4166.667, DoseUnit.milliliter),
         '4,17 L',
       );
-      // 2 400 g -> 2,4 kg, et non 2,40 kg
+
       expect(
         DoseRecommendation.formatQuantity(2400.0, DoseUnit.gram),
         '2,4 kg',
       );
-      // 40 000 g -> 40 kg
+
       expect(
         DoseRecommendation.formatQuantity(40000.0, DoseUnit.gram),
         '40 kg',
       );
-      // 6,6667 m3 -> 6,7 m³
+
       expect(
         DoseRecommendation.formatQuantity(6.6667, DoseUnit.cubicMeter),
         '6,7 m³',
@@ -120,14 +120,14 @@ void main() {
         splitCount: 2,
       );
       expect(action.isSplit, isTrue);
-      // 1 440 / 2 = 720 g par apport
+
       expect(action.quantityPerDose, 720.0);
       expect(action.formattedQuantityPerDose, '720 g');
       expect(action.formattedQuantity, '1,44 kg');
     });
 
     test('un splitCount de 0 ou négatif ne divise pas', () {
-      // Garde-fou : une division par zéro rendrait une quantité infinie.
+
       expect(_action(quantity: 100.0, splitCount: 0).quantityPerDose, 100.0);
       expect(_action(quantity: 100.0, splitCount: -3).quantityPerDose, 100.0);
     });
@@ -135,14 +135,14 @@ void main() {
 
   group('ordre métier', () {
     test('les rangs suivent TAC -> pH -> chlore -> équilibre', () {
-      // L’urgence d’un choc passe avant tout le reste.
+
       expect(
         ActionPriority.urgent.rank,
         lessThan(ActionPriority.alkalinity.rank),
       );
-      // Le TAC stabilise le pH : il se corrige avant.
+
       expect(ActionPriority.alkalinity.rank, lessThan(ActionPriority.ph.rank));
-      // Le pH commande l’efficacité du chlore.
+
       expect(ActionPriority.ph.rank, lessThan(ActionPriority.chlorine.rank));
       expect(
         ActionPriority.chlorine.rank,
@@ -168,8 +168,7 @@ void main() {
 
       expect(
         sorted.map((DoseRecommendation a) => a.sequenceIndex).toList(),
-        // urgent(7), alkalinity(3), puis les deux balance dans leur ordre
-        // d’ajout : 5 avant 9.
+
         <int>[7, 3, 5, 9],
       );
     });
@@ -250,7 +249,7 @@ void main() {
     });
 
     test('une quantité négative est ramenée à zéro', () {
-      // Une dose négative ferait « retirer du produit du bassin ».
+
       expect(
         DoseRecommendation.fromJson(<String, dynamic>{'quantity': -500.0})
             .quantity,
@@ -295,7 +294,6 @@ void main() {
         <String, dynamic>{'title': 'Baisser le pH', 'product': 'perdu'},
       );
 
-      // Le produit est reconstruit sur son défaut plutôt que rejeté.
       expect(restored.product, isNotNull);
       expect(restored.title, 'Baisser le pH');
     });

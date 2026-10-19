@@ -20,20 +20,20 @@ void main() {
       expect(config.pumpEfficiency, 0.75);
       expect(config.coverTravelSeconds, 90.0);
       expect(config.driver, DriverKind.simulation);
-      // Aucun consentement de sécurité tant que l’utilisateur ne l’a pas donne.
+
       expect(config.safetyConsentGiven, isFalse);
     });
 
     test('les dimensions par défaut donnent bien 40 m3', () {
       const PoolConfig config = PoolConfig();
-      // 8 x 4 x 1,25 = 40 m3
+
       expect(config.volumeFromDimensions, closeTo(40.0, 1e-9));
       expect(config.volumeFromDimensions, closeTo(config.volumeM3, 1e-9));
     });
 
     test('débit utile = débit nominal x rendement', () {
       const PoolConfig config = PoolConfig();
-      // 10 x 0,75 = 7,5 m3/h
+
       expect(config.effectiveFlowM3PerHour, closeTo(7.5, 1e-9));
     });
 
@@ -78,7 +78,7 @@ void main() {
             .hasMotorisedCover,
         isTrue,
       );
-      // Une bâche à bulles n’est pas un dispositif de sécurité pilotable.
+
       expect(
         const PoolConfig()
             .copyWith(cover: CoverType.bubbleCover)
@@ -165,8 +165,7 @@ void main() {
     test(
       'null, une chaine ou une liste rendent la configuration par defaut',
       () {
-        // L’application doit toujours s’ouvrir, même si la préférence à été
-        // ecrasee par autre chose qu’un objet.
+
         expect(PoolConfig.fromJson(null), const PoolConfig());
         expect(PoolConfig.fromJson('pas du json'), const PoolConfig());
         expect(PoolConfig.fromJson(<int>[1, 2, 3]), const PoolConfig());
@@ -192,7 +191,7 @@ void main() {
     test('les valeurs numériques ecrites en chaîne sont acceptees', () {
       final PoolConfig restored = PoolConfig.fromJson(<String, dynamic>{
         'volumeM3': '62.5',
-        // Virgule décimale : une version anterieure pouvait l’ecrire ainsi.
+
         'pumpEfficiency': '0,8',
       });
 
@@ -208,17 +207,15 @@ void main() {
         'averageDepthM': 0.0,
       });
 
-      // Volume borne à 1 m3 minimum : une dose calculée sur -40 m3 serait
-      // négative, une dose calculée sur 1 m3 est simplement fausse mais visible.
       expect(restored.volumeM3, 1.0);
-      // Un rendement au-delà de 1 n’a pas de sens physique.
+
       expect(restored.pumpEfficiency, 1.0);
       expect(restored.coverTravelSeconds, 600.0);
       expect(restored.averageDepthM, 0.2);
     });
 
     test('un consentement de sécurité ne se devine pas', () {
-      // Tout ce qui n’est pas un `true` explicite vaut « non consenti ».
+
       expect(
         PoolConfig.fromJson(<String, dynamic>{'safetyConsentGiven': 'oui'})
             .safetyConsentGiven,
@@ -237,12 +234,12 @@ void main() {
     });
 
     test('un enum stocke en index reste lisible', () {
-      // Compatibilité avec des données écrites en numérique.
+
       expect(
         PoolConfig.fromJson(<String, dynamic>{'treatment': 2}).treatment,
         TreatmentType.values[2],
       );
-      // Un index hors bornes retombe sur le défaut.
+
       expect(
         PoolConfig.fromJson(<String, dynamic>{'treatment': 99}).treatment,
         TreatmentType.stabilizedChlorine,
@@ -251,19 +248,18 @@ void main() {
   });
 
   test('le transport MQTT du banc d’essai est sélectionnable', () {
-    // Ajouté en fin d’énumération : les valeurs déjà écrites sur le disque ne
-    // sont pas décalées.
+
     expect(DriverKind.values.last, DriverKind.mqtt);
     expect(
       PoolConfig.fromJson(<String, dynamic>{'driver': 'mqtt'}).driver,
       DriverKind.mqtt,
     );
-    // Le défaut ne change pas : la simulation, utilisable sans appairage.
+
     expect(const PoolConfig().driver, DriverKind.simulation);
   });
 
   test('Kind est l’alias du genre de pilote', () {
-    // Nom court du paragraphe 8.1, conserve pour compatibilité.
+
     const Kind kind = DriverKind.simulation;
     expect(kind, DriverKind.simulation);
   });

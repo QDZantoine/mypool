@@ -1,12 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../models/weather_data.dart';
 import 'weather_providers.dart';
 
-class WeatherPage extends ConsumerWidget {
+class WeatherPage extends ConsumerStatefulWidget {
   const WeatherPage({
     super.key,
     this.title = 'Météo',
@@ -17,16 +19,43 @@ class WeatherPage extends ConsumerWidget {
   final bool showAppBar;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WeatherPage> createState() => _WeatherPageState();
+}
+
+class _WeatherPageState extends ConsumerState<WeatherPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshWeather();
+    }
+  }
+
+  void _refreshWeather() {
+    ref.invalidate(userPositionProvider);
+    ref.invalidate(currentWeatherCoordinatesProvider);
+    ref.invalidate(alertWeatherCoordinatesProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentWeatherAsync = ref.watch(currentWeatherCoordinatesProvider);
     final alertWeatherAsync = ref.watch(alertWeatherCoordinatesProvider);
 
     final content = RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(userPositionProvider);
-        ref.invalidate(currentWeatherCoordinatesProvider);
-        ref.invalidate(alertWeatherCoordinatesProvider);
-      },
+      onRefresh: () async => _refreshWeather(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16.0),
@@ -53,20 +82,16 @@ class WeatherPage extends ConsumerWidget {
       ),
     );
 
-    if (showAppBar) {
+    if (widget.showAppBar) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(title),
+          title: Text(widget.title),
           elevation: 2,
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Actualiser la météo',
-              onPressed: () {
-                ref.invalidate(userPositionProvider);
-                ref.invalidate(currentWeatherCoordinatesProvider);
-                ref.invalidate(alertWeatherCoordinatesProvider);
-              },
+              onPressed: _refreshWeather,
             ),
           ],
         ),
@@ -78,20 +103,47 @@ class WeatherPage extends ConsumerWidget {
   }
 }
 
-String _formatWeatherErrorMessage(Object error) {
+enum WeatherErrorType {
+  permissionPermanentlyDenied,
+  permissionDenied,
+  locationServiceDisabled,
+  timeout,
+  network,
+  unknown;
+
+  bool get isLocationRelated =>
+      this == WeatherErrorType.permissionPermanentlyDenied ||
+      this == WeatherErrorType.permissionDenied ||
+      this == WeatherErrorType.locationServiceDisabled ||
+      this == WeatherErrorType.timeout;
+}
+
+WeatherErrorType _classifyWeatherError(Object error) {
   final msg = error.toString().toLowerCase();
+
+  if (msg.contains('définitivement') ||
+      msg.contains('deniedforever') ||
+      msg.contains('paramètres')) {
+    return WeatherErrorType.permissionPermanentlyDenied;
+  }
 
   if (msg.contains('permission') ||
       msg.contains('refusé') ||
       msg.contains('refusée') ||
       msg.contains('denied')) {
-    return "Vous devez accorder à l'application l'accès à votre géolocalisation.";
+    return WeatherErrorType.permissionDenied;
   }
 
   if (msg.contains('désactivé') ||
       msg.contains('service') ||
       msg.contains('disabled')) {
-    return "Les services de géolocalisation sont désactivés. Veuillez les activer sur votre appareil.";
+    return WeatherErrorType.locationServiceDisabled;
+  }
+
+  if (msg.contains('délai') ||
+      msg.contains('timelimit') ||
+      msg.contains('timeout')) {
+    return WeatherErrorType.timeout;
   }
 
   if (msg.contains('connexion') ||
@@ -100,10 +152,27 @@ String _formatWeatherErrorMessage(Object error) {
       msg.contains('network') ||
       msg.contains('weatherexception') ||
       msg.contains('erreur lors de la connexion')) {
-    return "Une erreur est survenue. Veuillez vérifier votre connexion.";
+    return WeatherErrorType.network;
   }
 
-  return "Une erreur est survenue. Veuillez vérifier votre connexion.";
+  return WeatherErrorType.unknown;
+}
+
+String _formatWeatherErrorMessage(Object error) {
+  final type = _classifyWeatherError(error);
+  switch (type) {
+    case WeatherErrorType.permissionPermanentlyDenied:
+      return "L'accès à la localisation a été refusé définitivement. Veuillez l'autoriser dans les paramètres de votre appareil.";
+    case WeatherErrorType.permissionDenied:
+      return "Vous devez accorder à l'application l'accès à votre géolocalisation pour afficher la météo.";
+    case WeatherErrorType.locationServiceDisabled:
+      return "Les services de localisation sont désactivés. Veuillez activer le GPS sur votre appareil.";
+    case WeatherErrorType.timeout:
+      return "Délai d'attente GPS dépassé. Veuillez vérifier le signal GPS ou réessayer.";
+    case WeatherErrorType.network:
+    case WeatherErrorType.unknown:
+      return "Une erreur est survenue. Veuillez vérifier votre connexion.";
+  }
 }
 
 class _HeaderCard extends ConsumerWidget {
@@ -183,6 +252,14 @@ class _HeaderCard extends ConsumerWidget {
                 ],
               ),
             ),
+            if (positionAsync.hasError) ...[
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Paramètres de géolocalisation',
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: () => unawaited(Geolocator.openAppSettings()),
+              ),
+            ],
           ],
         ),
       ),
@@ -247,12 +324,46 @@ class _ErrorCard extends ConsumerWidget {
 
   final Object error;
 
+  Future<void> _handlePermissionRequest(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final status = await Geolocator.checkPermission();
+    if (status == LocationPermission.deniedForever) {
+      await Geolocator.openAppSettings();
+      return;
+    }
+
+    final newStatus = await Geolocator.requestPermission();
+    if (newStatus == LocationPermission.deniedForever) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Permission refusée définitivement. Ouverture des paramètres...',
+            ),
+            action: SnackBarAction(
+              label: 'Paramètres',
+              onPressed: () => unawaited(Geolocator.openAppSettings()),
+            ),
+          ),
+        );
+      }
+      await Geolocator.openAppSettings();
+      return;
+    }
+
+    ref.invalidate(userPositionProvider);
+    ref.invalidate(currentWeatherCoordinatesProvider);
+    ref.invalidate(alertWeatherCoordinatesProvider);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final errorType = _classifyWeatherError(error);
     final formattedMessage = _formatWeatherErrorMessage(error);
-    final isPermissionError = formattedMessage.contains('accorder') ||
-        formattedMessage.contains('géolocalisation');
+    final isLocationIssue = errorType.isLocationRelated;
 
     return Container(
       width: double.infinity,
@@ -270,7 +381,7 @@ class _ErrorCard extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                isPermissionError
+                isLocationIssue
                     ? Icons.location_off_outlined
                     : Icons.wifi_off_rounded,
                 color: theme.colorScheme.error,
@@ -279,8 +390,10 @@ class _ErrorCard extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  isPermissionError
-                      ? 'Accès géolocalisation requis'
+                  isLocationIssue
+                      ? (errorType == WeatherErrorType.locationServiceDisabled
+                          ? 'Localisation désactivée'
+                          : 'Accès géolocalisation requis')
                       : 'Erreur de connexion',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.error,
@@ -297,22 +410,71 @@ class _ErrorCard extends ConsumerWidget {
               color: theme.colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(120, 38),
-                foregroundColor: theme.colorScheme.error,
-                side: BorderSide(color: theme.colorScheme.error),
-              ),
-              onPressed: () {
-                ref.invalidate(userPositionProvider);
-                ref.invalidate(currentWeatherCoordinatesProvider);
-                ref.invalidate(alertWeatherCoordinatesProvider);
-              },
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Réessayer', style: TextStyle(fontSize: 14)),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (errorType == WeatherErrorType.locationServiceDisabled) ...[
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: () => unawaited(Geolocator.openLocationSettings()),
+                    icon: const Icon(Icons.location_on_outlined, size: 18),
+                    label: const Text('Activer le GPS'),
+                  ),
+                ] else if (errorType ==
+                    WeatherErrorType.permissionPermanentlyDenied) ...[
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: () => unawaited(Geolocator.openAppSettings()),
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    label: const Text('Ouvrir les paramètres'),
+                  ),
+                ] else if (errorType == WeatherErrorType.permissionDenied) ...[
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: () =>
+                        unawaited(_handlePermissionRequest(context, ref)),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text('Autoriser l\'accès'),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: () => unawaited(Geolocator.openAppSettings()),
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    label: const Text('Paramètres'),
+                  ),
+                ],
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(110, 36),
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: theme.colorScheme.error,
+                    side: BorderSide(
+                      color: theme.colorScheme.error.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  onPressed: () {
+                    ref.invalidate(userPositionProvider);
+                    ref.invalidate(currentWeatherCoordinatesProvider);
+                    ref.invalidate(alertWeatherCoordinatesProvider);
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Réessayer'),
+                ),
+              ],
             ),
           ),
         ],

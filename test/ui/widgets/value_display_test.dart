@@ -11,8 +11,7 @@ void main() {
 
   group('valeur et unité', () {
     test('l’unité fait nettement moins de la moitié du chiffre', () {
-      // Vu sur appareil : un « % » de la taille du nombre pèse autant que la
-      // mesure et déséquilibre toute la carte.
+
       expect(ValueDisplay.unitScale, lessThan(0.5));
       expect(ValueDisplay.unitScale, greaterThan(0.3));
     });
@@ -23,7 +22,7 @@ void main() {
       await tester.pumpWidget(
         wrap(const ValueDisplay(value: '22', unit: '%', size: ValueSize.large)),
       );
-      // « 22 % » et non « 22% », comme le veut la typographie française.
+
       final RichText rich = tester.widget<RichText>(find.byType(RichText));
       expect(rich.text.toPlainText(), '22\u202F%');
     });
@@ -34,15 +33,14 @@ void main() {
       await tester.pumpWidget(
         wrap(const ValueDisplay(value: '26,4', unit: '°C')),
       );
-      // Un seul RichText : le chiffre et l'unité ne peuvent pas se désaligner
-      // ni se retrouver sur deux lignes.
+
       expect(find.byType(RichText), findsOneWidget);
       expect(find.textContaining('26,4'), findsOneWidget);
     });
 
     testWidgets('sans unité, rien n’est ajouté', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const ValueDisplay(value: '13 h')));
-      // Aucune unité ajoutée : le texte rendu est exactement la valeur.
+
       expect(find.text('13 h'), findsOneWidget);
     });
   });
@@ -51,16 +49,14 @@ void main() {
     testWidgets('elle s’écrit en mots, jamais en tiret géant', (
       WidgetTester tester,
     ) async {
-      // C'est le défaut le plus visible relevé sur appareil : un « — » rendu
-      // en 76 px devient un trait plein qu'on prend pour une barre de
-      // chargement en panne.
+
       await tester.pumpWidget(
         wrap(const ValueDisplay(value: null, size: ValueSize.large)),
       );
 
       expect(find.text('non mesuré'), findsOneWidget);
       expect(find.text('—'), findsNothing);
-      // Et à la taille du texte courant, pas à celle d'une mesure.
+
       final Text text = tester.widget<Text>(find.text('non mesuré'));
       expect(text.style!.fontSize, lessThan(24));
     });
@@ -88,7 +84,6 @@ void main() {
         ),
       );
 
-      // Un écran vide est une invitation à agir, pas un cul-de-sac.
       expect(find.text('Température inconnue'), findsOneWidget);
       expect(find.text('Mesurez-la pour obtenir un planning.'), findsOneWidget);
       expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
@@ -105,8 +100,7 @@ void main() {
     testWidgets('un nombre long ne déborde pas à 200 % de police', (
       WidgetTester tester,
     ) async {
-      // C'est le réglage qui a révélé les défauts de mise en page sur
-      // appareil : à cette échelle, un nombre non contraint sort de sa carte.
+
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),

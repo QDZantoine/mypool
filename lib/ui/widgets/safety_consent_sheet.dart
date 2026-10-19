@@ -2,26 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Avertissement de sécurité du volet, à accepter avant toute commande.
-///
-/// RÈGLE DE SÉCURITÉ N° 4 : sans acceptation, aucune commande de volet
-/// n'agit. Le texte n'est pas une décharge de responsabilité : il explique ce
-/// que l'utilisateur doit faire, parce qu'un volet de piscine est un
-/// dispositif de sécurité au sens de la norme NF P90-308 et qu'une personne
-/// peut se trouver dans le bassin.
-///
-/// Le bouton d'acceptation est volontairement le second, et l'annulation est
-/// mise au même niveau visuel : rien n'incite à accepter sans lire.
 class SafetyConsentSheet extends StatelessWidget {
   const SafetyConsentSheet({super.key});
 
-  /// Affiche l'avertissement. Rend `true` si l'utilisateur a accepté.
   static Future<bool> show(BuildContext context) async {
     final bool? accepted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      // Non annulable par un glissement vers le bas : accepter ou refuser doit
-      // être un geste conscient.
+
       isDismissible: false,
       enableDrag: false,
       builder: (BuildContext context) => const SafetyConsentSheet(),
@@ -34,9 +22,7 @@ class SafetyConsentSheet extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
 
     return SafeArea(
-      // Défilable : sur un petit téléphone, l'avertissement ne doit ni être
-      // tronqué ni pousser les deux boutons hors de l'écran. Un texte de
-      // sécurité qu'on ne peut pas lire jusqu'au bout ne vaut rien.
+
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

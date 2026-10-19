@@ -5,11 +5,6 @@ import '../theme.dart';
 import 'measure_scale.dart';
 import 'value_display.dart';
 
-/// Une mesure : son nom, sa valeur, son échelle de lecture.
-///
-/// La valeur est à droite et en grand, l'échelle dessous sur toute la largeur.
-/// L'œil descend donc du nom à la valeur puis à la position dans la plage —
-/// et s'arrête dès qu'il a sa réponse.
 class ReadingRow extends StatelessWidget {
   const ReadingRow({
     required this.parameter,
@@ -21,14 +16,8 @@ class ReadingRow extends StatelessWidget {
 
   final WaterParameter parameter;
 
-  /// `null` si non mesuré. Jamais remplacé par un zéro.
   final double? value;
 
-  /// Depuis combien de temps la mesure date, quand cela compte.
-  ///
-  /// Affiché pour les paramètres qu'on teste à la main : un TAC d'il y a trois
-  /// semaines n'a pas la même valeur qu'un TAC d'hier, et le savoir change la
-  /// confiance qu'on accorde à la dose calculée.
   final Duration? age;
 
   final VoidCallback? onTap;
@@ -72,9 +61,7 @@ class ReadingRow extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: AppTheme.gap * 2),
-                        // Flexible et tronqué au besoin : « non mesuré · il y
-                        // a 12 jours » ne tient pas à côté d'une valeur à
-                        // trois chiffres sur un écran étroit.
+
                         Flexible(
                           child: Text(
                             age == null
@@ -95,9 +82,7 @@ class ReadingRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppTheme.gap * 3),
-              // La valeur et son unité forment un bloc aligné à droite : les
-              // lignes successives dessinent ainsi une colonne bien rangée,
-              // comme sur un relevé.
+
               ValueDisplay(
                 value: value == null ? null : _bare(value!),
                 unit: parameter.unit,
@@ -112,12 +97,6 @@ class ReadingRow extends StatelessWidget {
       ),
     );
 
-    // Une seule annonce pour toute la ligne : sans ce regroupement, un
-    // lecteur d'écran énonce « TAC », « trop bas », « 60 », « mg/L » et
-    // l'échelle séparément, et l'utilisateur doit recomposer la phrase.
-    //
-    // Le regroupement ENGLOBE le bouton, il n'est pas dedans : sinon le nœud
-    // du bouton reste sans libellé et le lecteur annonce « bouton » tout seul.
     if (onTap == null) {
       return MergeSemantics(child: content);
     }
@@ -136,7 +115,6 @@ class ReadingRow extends StatelessWidget {
   String _bare(double v) =>
       v.toStringAsFixed(parameter.decimals).replaceAll('.', ',');
 
-  /// « à l'instant », « il y a 3 h », « il y a 12 jours »
   static String _formatAge(Duration age) {
     if (age.inMinutes < 2) {
       return 'à l’instant';

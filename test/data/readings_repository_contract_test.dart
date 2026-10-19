@@ -5,8 +5,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 final DateTime _start = DateTime.utc(2026, 7, 15, 10);
 
-/// Valeurs littérales : comparer le résultat de `7.0 + i * 0.1` à un littéral
-/// revient à comparer deux arrondis flottants, ce qui n'est pas le sujet ici.
 const List<double> _phs = <double>[7.0, 7.1, 7.2, 7.3, 7.4];
 
 WaterReading _reading({
@@ -17,13 +15,6 @@ WaterReading _reading({
   return WaterReading(takenAt: _start.add(offset), ph: ph, source: source);
 }
 
-/// Contrat commun aux deux implémentations de [ReadingsRepository].
-///
-/// Il existe pour une raison précise : les tests des contrôleurs utiliseront
-/// le dépôt EN MÉMOIRE, plus rapide et sans fichier. Sans cette suite
-/// partagée, rien ne garantirait qu'il se comporte comme SQLite, et un test de
-/// contrôleur pourrait passer au vert sur un comportement que la vraie base ne
-/// reproduit pas.
 void runContract(String name, ReadingsRepository Function() create) {
   group('contrat — $name', () {
     late ReadingsRepository repository;
@@ -70,8 +61,7 @@ void runContract(String name, ReadingsRepository Function() create) {
     });
 
     test('à horodatage égal, la plus récemment insérée passe devant', () async {
-      // Une saisie et une trame de sonde peuvent tomber la même seconde :
-      // l’ordre doit rester déterministe, pas dépendre du hasard du moteur.
+
       await repository.insert(_reading(ph: 7.2));
       await repository.insert(_reading(ph: 7.3));
 
@@ -137,7 +127,6 @@ void runContract(String name, ReadingsRepository Function() create) {
         to: _start.add(const Duration(hours: 2)),
       );
 
-      // Une courbe se lit de gauche à droite, du plus ancien au plus récent.
       expect(rows.map((StoredReading s) => s.reading.ph).toList(), <double?>[
         7.1,
         7.2,
@@ -172,7 +161,6 @@ void runContract(String name, ReadingsRepository Function() create) {
         _start.add(const Duration(days: 2)),
       );
 
-      // La borne elle-même est conservée : « antérieures à » est strict.
       expect(removed, 2);
       expect(await repository.count(), 3);
     });
@@ -191,7 +179,6 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  // Le même contrat, exécuté sur la vraie base et sur le dépôt en mémoire.
   runContract('SQLite', () => ReadingsDatabase(path: inMemoryDatabasePath));
   runContract('mémoire', InMemoryReadingsRepository.new);
 }

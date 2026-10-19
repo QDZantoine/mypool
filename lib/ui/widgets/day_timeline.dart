@@ -3,16 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/filtration_schedule.dart';
 import '../theme.dart';
 
-/// Les créneaux de filtration posés sur une journée de 24 h.
-///
-/// Une liste de « 10:45 – 17:15 » demande de reconstruire mentalement la
-/// journée pour répondre à la seule question qu'on se pose : est-ce que ça
-/// tourne quand j'en ai besoin ? La bande y répond d'un regard — on voit les
-/// blocs, on voit les trous, on voit que le plus long couvre l'après-midi.
-///
-/// Même langage visuel que le nuancier de mesure : une bande, des zones, des
-/// graduations. L'application n'a ainsi qu'une seule façon de montrer une
-/// échelle.
 class DayTimeline extends StatelessWidget {
   const DayTimeline({required this.cycles, this.height = 34, super.key});
 
@@ -21,11 +11,6 @@ class DayTimeline extends StatelessWidget {
 
   static const int _minutesPerDay = 24 * 60;
 
-  /// Heures graduées sous la bande.
-  ///
-  /// Quatre repères seulement : minuit, 6 h, midi, 18 h. Un axe complet
-  /// serait illisible sur un téléphone au soleil, et personne n'a besoin de
-  /// lire l'heure exacte ici — les horaires précis sont dans la liste.
   static const List<int> _ticks = <int>[0, 6, 12, 18];
 
   @override
@@ -49,7 +34,7 @@ class DayTimeline extends StatelessWidget {
                 height: height,
                 child: Stack(
                   children: <Widget>[
-                    // Le fond : la journée entière, pompe à l'arrêt.
+
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -60,8 +45,7 @@ class DayTimeline extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Les repères d'heure, sous les créneaux pour ne pas les
-                    // barrer.
+
                     for (final int hour in _ticks)
                       if (hour > 0)
                         Positioned(
@@ -75,8 +59,7 @@ class DayTimeline extends StatelessWidget {
                             ),
                           ),
                         ),
-                    // Les créneaux. Un créneau qui passe minuit est dessiné en
-                    // deux morceaux : la journée est un cycle, pas une ligne.
+
                     for (final FiltrationCycle cycle in cycles)
                       for (final _Slice slice in _slicesOf(cycle))
                         Positioned(
@@ -85,7 +68,7 @@ class DayTimeline extends StatelessWidget {
                           bottom: 4,
                           width:
                               (width * slice.durationMinutes / _minutesPerDay)
-                              // Un créneau court doit rester visible.
+
                               .clamp(3.0, width),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
@@ -100,7 +83,7 @@ class DayTimeline extends StatelessWidget {
             },
           ),
           const SizedBox(height: AppTheme.gap),
-          // Les graduations, réparties comme les repères au-dessus.
+
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               return Stack(
@@ -127,14 +110,13 @@ class DayTimeline extends StatelessWidget {
     );
   }
 
-  /// Découpe un créneau en morceaux affichables.
   static List<_Slice> _slicesOf(FiltrationCycle cycle) {
     final int start = cycle.startMinuteOfDay % _minutesPerDay;
     final int end = start + cycle.durationMinutes;
     if (end <= _minutesPerDay) {
       return <_Slice>[_Slice(start, cycle.durationMinutes)];
     }
-    // Passe minuit : la fin repart du début de la bande.
+
     return <_Slice>[
       _Slice(start, _minutesPerDay - start),
       _Slice(0, end - _minutesPerDay),
@@ -142,7 +124,6 @@ class DayTimeline extends StatelessWidget {
   }
 }
 
-/// Un morceau de créneau, entièrement contenu dans la journée.
 class _Slice {
   const _Slice(this.startMinute, this.durationMinutes);
 

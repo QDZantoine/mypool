@@ -22,8 +22,7 @@ WaterReading _reading({
 }
 
 void main() {
-  // Un vrai SQLite, en mémoire : les requêtes sont réellement exécutées, pas
-  // simulées. Une erreur de SQL se voit ici et non sur un téléphone.
+
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -41,20 +40,18 @@ void main() {
 
   group('schéma', () {
     test('la table et son index sont créés', () async {
-      // Une insertion suffit à déclencher l'ouverture et la création.
+
       await database.insert(_reading(ph: 7.2));
 
       final Database db = await openDatabase(inMemoryDatabasePath);
       addTearDown(db.close);
-      // On interroge la base réellement ouverte par le dépôt.
+
       expect(await database.count(), 1);
       expect(ReadingsDatabase.schemaVersion, 1);
     });
 
     test('la migration ne touche à rien en version 1', () async {
-      // Le schéma est en version 1 et le champ `source` y figure dès
-      // l'origine : il n'y a rien à migrer. Le test verrouille cet état, et
-      // échouera le jour où une migration sera ajoutée sans être vérifiée.
+
       await database.insert(
         _reading(ph: 7.2, source: MeasurementSource.sensor),
       );
@@ -105,8 +102,7 @@ void main() {
     test(
       'une valeur non mesurée reste absente, elle ne devient pas zéro',
       () async {
-        // Le point essentiel du schéma : une colonne NULL veut dire « non
-        // mesuré ». Un zéro ferait calculer une correction massive.
+
         await database.insert(WaterReading(takenAt: _start, ph: 7.2));
 
         final WaterReading restored = (await database.recent()).first.reading;
@@ -127,8 +123,7 @@ void main() {
     });
 
     test('les horodatages sont stockés en UTC', () async {
-      // Une base relue après un changement d’heure ou un voyage doit rendre
-      // les mêmes instants.
+
       final DateTime local = DateTime(2026, 7, 15, 10, 30);
       await database.insert(WaterReading(takenAt: local, ph: 7.2));
 
@@ -141,8 +136,7 @@ void main() {
     });
 
     test('chaque insertion reçoit une clé distincte', () async {
-      // Deux mesures au même instant : une saisie et une trame de sonde
-      // peuvent tomber la même seconde.
+
       final StoredReading a = await database.insert(
         _reading(ph: 7.2, source: MeasurementSource.manual),
       );
@@ -157,7 +151,7 @@ void main() {
 
   group('lecture de l’historique', () {
     setUp(() async {
-      // Trois mesures, insérées dans le désordre chronologique.
+
       await database.insert(
         _reading(offset: const Duration(hours: 2), ph: 7.4),
       );
@@ -179,7 +173,7 @@ void main() {
     test('recent respecte la limite', () async {
       expect((await database.recent(limit: 2)).length, 2);
       expect((await database.recent(limit: 2)).first.reading.ph, 7.4);
-      // Une limite non positive ne doit pas ramener toute la table.
+
       expect((await database.recent(limit: 0)).length, 1);
       expect((await database.recent(limit: -5)).length, 1);
     });
@@ -189,7 +183,7 @@ void main() {
     });
 
     test('between rend la période dans l’ordre chronologique', () async {
-      // Une courbe se lit du plus ancien au plus récent, de gauche à droite.
+
       final List<StoredReading> rows = await database.between(
         from: _start,
         to: _start.add(const Duration(hours: 2)),
@@ -202,8 +196,7 @@ void main() {
     });
 
     test('les bornes de between sont incluses', () async {
-      // Une plage « du 1er au 7 » doit contenir les mesures prises exactement
-      // à ces instants.
+
       final List<StoredReading> rows = await database.between(
         from: _start.add(const Duration(hours: 1)),
         to: _start.add(const Duration(hours: 1)),
@@ -223,9 +216,7 @@ void main() {
 
   group('filtre par origine', () {
     test('latest distingue saisie et sonde', () async {
-      // La règle d’échantillonnage a besoin de la dernière mesure de SONDE :
-      // une saisie manuelle ne doit pas empêcher d’enregistrer un point
-      // automatique.
+
       await database.insert(
         _reading(ph: 7.2, source: MeasurementSource.sensor),
       );
@@ -291,7 +282,6 @@ void main() {
           _start.add(const Duration(days: 2)),
         );
 
-        // Les jours 0 et 1 partent, la borne du jour 2 reste.
         expect(removed, 2);
         expect(await database.count(), 3);
         expect((await database.recent()).last.reading.ph, closeTo(7.2, 1e-9));
@@ -301,8 +291,7 @@ void main() {
 
   group('tolérance à une base abîmée', () {
     test('une ligne aux types inattendus reste lisible', () async {
-      // Une base écrite par une version antérieure, ou modifiée à la main, ne
-      // doit pas faire échouer l’affichage de tout l’historique.
+
       final StoredReading stored = ReadingsDatabase.fromRow(<String, Object?>{
         'id': '42',
         'taken_at': '1770000000000',
@@ -316,12 +305,11 @@ void main() {
       expect(stored.id, 42);
       expect(stored.reading.takenAt.millisecondsSinceEpoch, 1770000000000);
       expect(stored.reading.ph, 7.4);
-      // Illisible devient absent, pas zéro.
+
       expect(stored.reading.tac, isNull);
       expect(stored.reading.th, isNull);
       expect(stored.reading.note, isNull);
-      // Une origine inconnue vaut « saisie » : on ne prête pas à une mesure
-      // la crédibilité d’une sonde sans preuve.
+
       expect(stored.reading.source, MeasurementSource.manual);
     });
 
@@ -338,7 +326,7 @@ void main() {
     );
 
     test('un entier stocké en réel est arrondi', () async {
-      // SQLite peut rendre un INTEGER sous forme de double après un calcul.
+
       final StoredReading stored = ReadingsDatabase.fromRow(<String, Object?>{
         'id': 42.7,
         'taken_at': 1770000000000.0,
@@ -374,8 +362,7 @@ void main() {
     test('la base se réouvre après fermeture', () async {
       await database.insert(_reading(ph: 7.2));
       await database.close();
-      // Réouverture : une base en mémoire repart vide, ce qui suffit à
-      // vérifier qu'aucune exception n'est levée.
+
       expect(await database.count(), 0);
     });
 

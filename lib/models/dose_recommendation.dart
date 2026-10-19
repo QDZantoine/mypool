@@ -2,41 +2,25 @@ import 'chemical_product.dart';
 import 'json_tolerant.dart';
 import 'water_reading.dart';
 
-/// Rang métier d'une correction.
-///
-/// L'ordre n'est pas de la présentation, c'est de la chimie : le TAC stabilise
-/// le pH, et le pH commande l'efficacite du chlore. Corriger le chlore avant le
-/// pH fait consommer du produit pour rien.
 enum ActionPriority {
-  /// Traitement choc : une eau qui pique ou qui verdit passe avant le confort.
+
   urgent(0),
 
-  /// TAC : il se corrige en premier, sinon le pH corrige repart.
   alkalinity(1),
 
-  /// pH : il commande la part de chlore réellement actif.
   ph(2),
 
-  /// Chlore d'entretien.
   chlorine(3),
 
-  /// Stabilisant, TH, sel : l'équilibre de fond, sans urgence.
   balance(4),
 
-  /// Information seule, aucun produit à verser.
   information(5);
 
   const ActionPriority(this.rank);
 
-  /// Rang de tri. Plus petit = à faire en premier.
   final int rank;
 }
 
-/// Une action concrete à realiser sur le bassin.
-///
-/// Immuable, et sans aucune mise en forme d'écran : le formatage de la quantité
-/// est ici parce qu'il fait partie du contrat métier (virgule décimale,
-/// bascule g/kg et ml/L), pas parce que c'est de la présentation.
 class DoseRecommendation {
   const DoseRecommendation({
     required this.parameter,
@@ -53,67 +37,40 @@ class DoseRecommendation {
     this.warning,
   });
 
-  /// Paramètre corrige. Sert à relier l'action à la mesure affichee.
   final WaterParameter parameter;
 
   final ActionPriority priority;
 
-  /// Ordre d'ajout par le moteur. Second critère de tri : le tri de Dart n'est
-  /// pas garanti stable, deux actions de même rang doivent rester dans l'ordre
-  /// ou le moteur les à produites.
   final int sequenceIndex;
 
   final String title;
 
-  /// Le pourquoi, en francais, affichable tel quel.
   final String explanation;
 
-  /// Quantité totale à apporter, dans l'unite `unit`.
   final double quantity;
 
   final DoseUnit unit;
 
-  /// Nombre d'apports. Au-delà de 1, l'apport doit être fractionne : un gros
-  /// apport en une fois crée un point de concentration qui attaque le liner et
-  /// fausse la mesure suivante.
   final int splitCount;
 
-  /// Produit utilisé. Nul quand l'action n'est pas un dosage (renouvellement
-  /// d'eau, information).
   final ChemicalProduct? product;
 
   final double? currentValue;
   final double? targetValue;
 
-  /// Avertissement obligatoire quand il y en à un (baignade interdite, chute
-  /// de pH attendue, fractionnement).
   final String? warning;
 
-  /// Quantité par apport, quand la dose est fractionnee.
   double get quantityPerDose =>
       splitCount <= 1 ? quantity : quantity / splitCount;
 
   bool get isSplit => splitCount > 1;
 
-  /// Quantité totale mise en forme : « 250 g », « 1,44 kg », « 400 ml »,
-  /// « 1,5 L », « 15 m³ ».
   String get formattedQuantity => formatQuantity(quantity, unit);
 
-  /// Quantité d'un seul apport mise en forme.
   String get formattedQuantityPerDose => formatQuantity(quantityPerDose, unit);
 
-  /// Seuil de bascule vers l'unite superieure.
-  ///
-  /// En dessous de 1 000 g on parle en grammes (« 250 g » est plus parlant que
-  /// « 0,25 kg »), au-dessus en kilogrammes. Même logique pour ml et L.
   static const double _unitBreak = 1000.0;
 
-  /// Met en forme une quantité selon les règles d'affichage du projet.
-  ///
-  /// - sous le seuil : entier arrondi, pas de décimale inutile (250 g, 400 ml) ;
-  /// - au-dessus : deux décimales au maximum, zéros de fin supprimés
-  ///   (1,44 kg mais 1,5 L et non 1,50 L) ;
-  /// - séparateur décimal : la virgule.
   static String formatQuantity(double quantity, DoseUnit unit) {
     switch (unit) {
       case DoseUnit.gram:
@@ -127,8 +84,7 @@ class DoseRecommendation {
         }
         return '${_formatNumber(quantity / _unitBreak, 2)} L';
       case DoseUnit.cubicMeter:
-        // Un volume d'eau à renouveler se lit au dixieme de m3 ; il n'y a pas
-        // d'unite superieure utile à l'échelle d'un bassin.
+
         return '${_formatNumber(quantity, 1)} m³';
     }
   }
@@ -138,7 +94,7 @@ class DoseRecommendation {
     if (!fixed.contains('.')) {
       return fixed;
     }
-    // Retire les zéros de fin puis le point devenu inutile : 1,50 -> 1,5.
+
     String trimmed = fixed;
     while (trimmed.endsWith('0')) {
       trimmed = trimmed.substring(0, trimmed.length - 1);
@@ -149,11 +105,6 @@ class DoseRecommendation {
     return trimmed.replaceAll('.', ',');
   }
 
-  /// Trie une liste d'actions dans l'ordre métier.
-  ///
-  /// Tri explicite sur (rang de priorité, ordre d'ajout) : `List.sort` n'est
-  /// pas garanti stable en Dart, s'appuyer sur sa stabilite ferait dependre
-  /// l'ordre d'affichage de la taille de la liste.
   static List<DoseRecommendation> sorted(List<DoseRecommendation> actions) {
     final List<DoseRecommendation> copy = List<DoseRecommendation>.from(
       actions,
@@ -233,17 +184,14 @@ class DoseRecommendation {
       sequenceIndex: readInt(json, 'sequenceIndex', 0),
       title: readString(json, 'title', 'Action'),
       explanation: readString(json, 'explanation', ''),
-      // Une quantité négative relue du disque n'a aucun sens : on la ramène à
-      // zéro, l'action sera affichee sans dose plutôt que de faire retirer du
-      // produit du bassin.
+
       quantity: clampDouble(
         readDouble(json, 'quantity', 0.0),
         0.0,
         double.maxFinite,
       ),
       unit: readEnum(json, 'unit', DoseUnit.values, DoseUnit.gram),
-      // Au moins un apport : un fractionnement à zéro rendrait la division par
-      // `splitCount` infinie.
+
       splitCount: readInt(json, 'splitCount', 1).clamp(1, 100),
       product: json['product'] == null
           ? null

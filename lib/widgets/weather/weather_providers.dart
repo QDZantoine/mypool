@@ -7,7 +7,6 @@ import 'package:geolocator/geolocator.dart';
 import '../../models/weather_data.dart';
 import '../../state/providers.dart';
 
-// Provider pour obtenir la position GPS réelle de l'utilisateur avec demande de permission
 final userPositionProvider = FutureProvider.autoDispose<Position>((ref) async {
   final serviceEnabled = await Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
@@ -32,7 +31,6 @@ final userPositionProvider = FutureProvider.autoDispose<Position>((ref) async {
     );
   }
 
-  // 1. Essaie d'abord de récupérer la dernière position connue (instantané)
   try {
     final lastKnown = await Geolocator.getLastKnownPosition();
     if (lastKnown != null) {
@@ -40,7 +38,6 @@ final userPositionProvider = FutureProvider.autoDispose<Position>((ref) async {
     }
   } catch (_) {}
 
-  // 2. Tente de récupérer la position actuelle avec un timeout de 5s pour l'émulateur
   try {
     return await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
@@ -59,7 +56,6 @@ final userPositionProvider = FutureProvider.autoDispose<Position>((ref) async {
   }
 });
 
-// Providers pour la météo courante et les alertes basées sur la position de l'utilisateur
 final currentWeatherCoordinatesProvider =
     FutureProvider.autoDispose<WeatherData>((ref) async {
       final position = await ref.watch(userPositionProvider.future);

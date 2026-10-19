@@ -48,9 +48,7 @@ void main() {
     testWidgets('un geste annulé par le système arrête aussi', (
       WidgetTester tester,
     ) async {
-      // C'est le cas qui compte le plus : appel entrant, verrouillage de
-      // l'écran, notification plein écran. Le doigt n'est jamais « relevé »,
-      // le geste est annulé.
+
       await tester.pumpWidget(wrap(button()));
 
       final TestGesture gesture = await tester.startGesture(
@@ -73,12 +71,10 @@ void main() {
       final TestGesture gesture = await tester.startGesture(center);
       await tester.pump();
 
-      // Comme sur un bouton physique dont on retire la main.
       await gesture.moveTo(center + const Offset(0, 400));
       await tester.pump();
       expect(events, <String>['start', 'end']);
 
-      // Le relâchement qui suit ne redéclenche pas un second arrêt.
       await gesture.up();
       await tester.pump();
       expect(events, <String>['start', 'end']);
@@ -93,7 +89,6 @@ void main() {
       final TestGesture gesture = await tester.startGesture(center);
       await tester.pump();
 
-      // Un doigt qui tremble légèrement doit continuer à commander.
       await gesture.moveTo(center + const Offset(4, 4));
       await tester.pump();
       expect(events, <String>['start']);
@@ -106,8 +101,7 @@ void main() {
     testWidgets('le widget détruit sous le doigt arrête le mouvement', (
       WidgetTester tester,
     ) async {
-      // Changement d'écran, rotation, fermeture de l'application alors qu'un
-      // doigt est posé.
+
       await tester.pumpWidget(wrap(button()));
       await tester.startGesture(tester.getCenter(find.byType(HoldButton)));
       await tester.pump();
@@ -146,7 +140,6 @@ void main() {
       );
       await tester.pump();
 
-      // Une paume posée à plat ne doit pas doubler les commandes.
       expect(events, <String>['start']);
 
       await second.up();
@@ -192,7 +185,6 @@ void main() {
         ),
       );
 
-      // Un bouton grisé sans explication laisse l'utilisateur chercher.
       expect(
         find.text('Acceptez l’avertissement de sécurité.'),
         findsOneWidget,
@@ -221,7 +213,7 @@ void main() {
 
     testWidgets('la cible tactile est large', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(button()));
-      // Une main mouillée sur un écran chaud rate une petite cible.
+
       expect(
         tester.getSize(find.byType(HoldButton)).height,
         greaterThanOrEqualTo(88.0),
@@ -231,12 +223,7 @@ void main() {
 
   group('garde-fou de source', () {
     test('le bouton n’utilise ni onTap ni GestureDetector', () {
-      // Un appui bref déclencherait un mouvement qui se poursuivrait après le
-      // relâchement, ce que la norme interdit. Et GestureDetector perd le
-      // relâchement quand un ancêtre défilable gagne l'arène de gestes.
-      // Les commentaires sont écartés : ce fichier CITE `onTap` et
-      // `GestureDetector` pour expliquer pourquoi ils sont interdits, et un
-      // garde-fou qui échoue sur sa propre justification serait inutilisable.
+
       final String source = File('lib/ui/widgets/hold_button.dart')
           .readAsLinesSync()
           .where((String line) => !line.trimLeft().startsWith('//'))
@@ -255,7 +242,7 @@ void main() {
           reason: 'hold_button.dart contient « $forbidden »',
         );
       }
-      // Et il utilise bien les quatre événements de pointeur brut.
+
       for (final String required in <String>[
         'Listener(',
         'onPointerDown',

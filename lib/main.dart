@@ -9,4 +9,3 @@ void main() async {
   await dotenv.load(fileName: '.env');
   runApp(const ProviderScope(child: AquaControlApp()));
 }
-

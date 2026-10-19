@@ -39,8 +39,7 @@ void main() {
     test(
       'sans surcharge, les implémentations réelles sont utilisées',
       () async {
-        // Vérifie que le câblage de production s'assemble : préférences de la
-        // plateforme et base SQLite, sans double en mémoire.
+
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final ProviderContainer container = ProviderContainer();
         addTearDown(container.dispose);
@@ -54,7 +53,6 @@ void main() {
           isA<ReadingsDatabase>(),
         );
 
-        // Et le tout fonctionne bout en bout.
         await container.read(poolConfigProvider.notifier).edit(volumeM3: 55.0);
         expect(container.read(poolConfigProvider).volumeM3, 55.0);
 
@@ -82,9 +80,7 @@ void main() {
             ),
           ),
           readingsRepositoryProvider.overrideWithValue(readings),
-          // Seul le transport est remplacé : le pilote, le contrôleur et
-          // l'échantillonnage sont ceux de production, y compris la condition
-          // qui n'instancie le pilote que si la liaison est MQTT.
+
           mqttTransportProvider.overrideWith(
             (Ref ref) =>
                 ref.watch(
@@ -120,13 +116,10 @@ void main() {
 
       await deliver(_telemetry(ph: 7.24, tempC: 26.4));
 
-      // État en direct.
       final TelemetryState telemetry = container.read(telemetryProvider);
       expect(telemetry.livePh, 7.24);
       expect(telemetry.liveTemperatureC, 26.4);
 
-      // Première mesure : la règle la retient et elle passe par le contrôleur
-      // d'historique, donc la liste affichée se met à jour.
       expect(container.read(readingsProvider).recent.length, 1);
       expect(container.read(readingsProvider).latestSensor?.ph, 7.24);
     });
@@ -134,28 +127,23 @@ void main() {
     test('la sonde fait foi sur le pH, la saisie apporte le reste', () async {
       await bootstrap(container);
 
-      // Une saisie sans température.
       await container
           .read(readingsProvider.notifier)
           .record(WaterReading(takenAt: _start, ph: 7.9, tac: 100.0));
       await deliver(_telemetry(ph: 7.24, tempC: 26.4));
 
       final WaterReading? effective = container.read(effectiveReadingProvider);
-      // La SONDE fait foi sur le pH : sa lecture a deux secondes, la saisie
-      // décrit l'eau d'un autre moment. Doser sur la valeur périmée ferait
-      // verser à côté.
+
       expect(effective?.ph, 7.24);
       expect(effective?.temperature, 26.4);
-      // Le TAC saisi est conservé : aucune sonde ne le mesure, et c'est lui
-      // qui fixe la dose de pH.
+
       expect(effective?.tac, 100.0);
-      // Et le planning de filtration en découle : 26,4 / 2 = 13,2 h = 792 min.
+
       expect(container.read(filtrationPlanProvider)?.recommendedMinutes, 792);
     });
 
     test('une sonde partielle laisse la saisie combler le trou', () async {
-      // Cas réel : la sonde pH est débranchée mais le NTC répond. La trame
-      // arrive donc avec une température et sans pH.
+
       await bootstrap(container);
       await container
           .read(readingsProvider.notifier)
@@ -168,10 +156,9 @@ void main() {
       );
 
       final WaterReading? effective = container.read(effectiveReadingProvider);
-      // La sonde impose la température qu'elle mesure.
+
       expect(effective?.temperature, 24.0);
-      // Et le pH saisi reste, faute de mieux : mieux vaut une valeur datée
-      // dont on connaît l'âge qu'aucune valeur.
+
       expect(effective?.ph, 7.6);
       expect(effective?.tac, 100.0);
     });
@@ -183,8 +170,7 @@ void main() {
       final WaterReading? effective = container.read(effectiveReadingProvider);
       expect(effective?.ph, 7.8);
       expect(effective?.source, MeasurementSource.sensor);
-      // Et les recommandations suivent.
-      // 7,8 - 7,2 = 0,60 ; 0,60 x 40 x 60 = 1 440 g
+
       expect(
         container.read(recommendationsProvider).first.quantity,
         closeTo(1440.0, 0.001),
@@ -195,7 +181,6 @@ void main() {
       await bootstrap(container);
       final PoolDeviceDriver driver = container.read(deviceDriverProvider);
 
-      // Limite assumée du banc d'essai (addendum § 8.1).
       await expectLater(
         driver.pushFiltrationSchedule(
           container.read(filtrationPlanProvider) ?? FiltrationSchedule.empty,
@@ -214,7 +199,7 @@ void main() {
           .edit(driver: DriverKind.simulation);
 
       expect(container.read(mqttDriverProvider), isNull);
-      // Le pilote libéré refuse toute nouvelle commande.
+
       await expectLater(
         mqtt!.setRelay(DeviceChannel.pump, on: true),
         throwsA(isA<DeviceException>()),
@@ -224,8 +209,7 @@ void main() {
 
   group('transport réel', () {
     test('il s’instancie sans toucher au réseau', () {
-      // Le constructeur ne connecte pas : la connexion est explicite. Cela
-      // permet de construire le pilote au démarrage sans attendre le broker.
+
       final MqttClientTransport transport = MqttClientTransport(
         settings: const MqttSettings(deviceId: 'a7f3c1e9b2xx'),
       );

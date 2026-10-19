@@ -11,9 +11,8 @@ void main() {
         durationMinutes: 390,
       );
 
-      // 645 min = 10 h 45
       expect(cycle.formattedStart, '10:45');
-      // 645 + 390 = 1 035 min = 17 h 15
+
       expect(cycle.endMinuteOfDay, 1035);
       expect(cycle.formattedEnd, '17:15');
       expect(cycle.duration, const Duration(minutes: 390));
@@ -25,21 +24,20 @@ void main() {
         durationMinutes: 180,
       );
 
-      // 1 380 min = 23 h 00, plus 3 h -> 2 h 00 le lendemain
       expect(cycle.formattedStart, '23:00');
       expect(cycle.endMinuteOfDay, 120);
       expect(cycle.formattedEnd, '02:00');
     });
 
     test('formatage des durées', () {
-      // 320 min = 5 h 20
+
       expect(FiltrationCycle.formatDuration(320), '5 h 20');
-      // 780 min = 13 h pile, sans « 00 » inutile
+
       expect(FiltrationCycle.formatDuration(780), '13 h');
-      // sous l’heure, on parle en minutes
+
       expect(FiltrationCycle.formatDuration(45), '45 min');
       expect(FiltrationCycle.formatDuration(0), '0 min');
-      // les minutes sont sur deux chiffres : 6 h 05, pas 6 h 5
+
       expect(FiltrationCycle.formatDuration(365), '6 h 05');
     });
 
@@ -48,7 +46,7 @@ void main() {
       expect(FiltrationCycle.formatMinuteOfDay(63), '01:03');
       expect(FiltrationCycle.formatMinuteOfDay(840), '14:00');
       expect(FiltrationCycle.formatMinuteOfDay(1439), '23:59');
-      // Au-delà de la journée, l’heure est ramenée dans la journée.
+
       expect(FiltrationCycle.formatMinuteOfDay(1500), '01:00');
     });
 
@@ -57,7 +55,7 @@ void main() {
         startMinuteOfDay: 645,
         durationMinutes: 390,
       );
-      // 390 min = 6 h 30
+
       expect(cycle.formattedDuration, '6 h 30');
       expect(cycle.toString(), contains('10:45'));
       expect(cycle == Object(), isFalse);
@@ -86,12 +84,11 @@ void main() {
         turnoverMinutes: 320,
       );
 
-      // 234 + 390 + 156 = 780 min = 13 h
       expect(schedule.totalMinutes, 780);
       expect(schedule.total, const Duration(minutes: 780));
       expect(schedule.formattedTotal, '13 h');
       expect(schedule.formattedTurnover, '5 h 20');
-      // 780 / 320 = 2,4375 rotations
+
       expect(schedule.turnoverCount, closeTo(2.4375, 1e-9));
     });
 
@@ -114,7 +111,7 @@ void main() {
       expect(FiltrationSchedule.empty.mode, FiltrationMode.off);
       expect(FiltrationSchedule.empty.cycles, isEmpty);
       expect(FiltrationSchedule.empty.totalMinutes, 0);
-      // Sans rotation connue, le compte de rotations est nul et non infini.
+
       expect(FiltrationSchedule.empty.turnoverCount, 0.0);
     });
 
@@ -145,7 +142,7 @@ void main() {
         ],
       );
       expect(a, isNot(b));
-      // Et un planning de longueur differente non plus.
+
       expect(
         a,
         isNot(
@@ -228,7 +225,7 @@ void main() {
     });
 
     test('une heure de depart hors journée est ramenée dans la journée', () {
-      // 1 500 - 1 440 = 60 min = 01 h 00 : le créneau reste exécutable.
+
       expect(
         FiltrationCycle.fromJson(<String, dynamic>{'startMinuteOfDay': 1500})
             .startMinuteOfDay,

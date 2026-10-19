@@ -21,8 +21,6 @@ void main() {
         wrap(const DayTimeline(cycles: <FiltrationCycle>[])),
       );
 
-      // Quatre repères et la borne de fin : un axe complet serait illisible
-      // sur un téléphone au soleil.
       for (final String label in <String>['0h', '6h', '12h', '18h', '24h']) {
         expect(find.text(label), findsOneWidget, reason: label);
       }
@@ -46,8 +44,7 @@ void main() {
     testWidgets('un créneau qui passe minuit est dessiné en deux morceaux', (
       WidgetTester tester,
     ) async {
-      // La journée est un cycle, pas une ligne : un créneau de 23 h à 2 h
-      // occupe les deux extrémités de la bande.
+
       await tester.pumpWidget(
         wrap(
           const DayTimeline(
@@ -60,15 +57,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      // Le fond, les trois repères internes et les deux morceaux.
+
       expect(find.byType(DecoratedBox), findsNWidgets(3));
     });
 
     testWidgets('un créneau très court reste visible', (
       WidgetTester tester,
     ) async {
-      // 5 minutes sur 1 440 font moins d'un pixel : sans largeur plancher, le
-      // créneau disparaîtrait de la bande.
+
       await tester.pumpWidget(
         wrap(
           const DayTimeline(
@@ -100,8 +96,6 @@ void main() {
         ),
       );
 
-      // Une bande dessinée est invisible au lecteur d'écran : les horaires
-      // doivent être énoncés.
       final SemanticsNode node = tester.getSemantics(find.byType(DayTimeline));
       expect(node.label, contains('10:45'));
       expect(node.label, contains('17:15'));

@@ -1,34 +1,22 @@
 import 'json_tolerant.dart';
 
-/// État d'un paramètre par rapport à sa plage de référence.
 enum ParameterStatus {
-  /// Aucune mesure saisie : rien à conclure, et surtout rien à doser.
+
   unknown,
 
-  /// Sous la plage acceptable : correction prioritaire.
   veryLow,
 
-  /// Entre la plage acceptable et la plage idéale, cote bas.
   low,
 
-  /// Dans la plage idéale.
   ideal,
 
-  /// Entre la plage idéale et la plage acceptable, cote haut.
   high,
 
-  /// Au-delà de la plage acceptable : correction prioritaire.
   veryHigh,
 }
 
-/// Paramètres mesures et leurs plages de référence (annexe À.1).
-///
-/// La plage « idéale » est celle à viser ; la plage « acceptable » est celle
-/// au-delà de laquelle la correction devient prioritaire. Les deux existent
-/// parce qu'un pH de 7,5 n'est pas un problème, alors qu'un pH de 8,2 en est un.
 enum WaterParameter {
-  /// Le pH commande l'efficacite du chlore : à 7,2 environ 60 % du chlore est
-  /// actif, à 8,0 il n'en reste qu'un quart.
+
   ph(
     label: 'pH',
     unit: '',
@@ -40,7 +28,6 @@ enum WaterParameter {
     decimals: 1,
   ),
 
-  /// Chlore libre : le désinfectant réellement disponible.
   freeChlorine(
     label: 'Chlore libre',
     unit: 'mg/L',
@@ -52,8 +39,6 @@ enum WaterParameter {
     decimals: 1,
   ),
 
-  /// Chlore combiné (chloramines) : du chlore déjà consommé, irritant et
-  /// inefficace. Au-delà de 0,6 mg/L un traitement choc est nécessaire.
   combinedChlorine(
     label: 'Chlore combiné',
     unit: 'mg/L',
@@ -65,8 +50,6 @@ enum WaterParameter {
     decimals: 1,
   ),
 
-  /// TAC (alcalinité totale) : le tampon qui empeche le pH de varier. On le
-  /// corrige avant le pH, sinon le pH repart.
   tac(
     label: 'TAC',
     unit: 'mg/L',
@@ -78,8 +61,6 @@ enum WaterParameter {
     decimals: 0,
   ),
 
-  /// TH (durete calcique) : trop bas l'eau attaque les joints et le liner,
-  /// trop haut elle entartre.
   th(
     label: 'TH',
     unit: 'mg/L',
@@ -91,9 +72,6 @@ enum WaterParameter {
     decimals: 0,
   ),
 
-  /// Stabilisant (acide cyanurique) : protège le chlore des UV mais le freine.
-  /// Il ne s'elimine pas : au-delà de 75 mg/L, seul le renouvellement d'eau
-  /// fait baisser la valeur.
   stabilizer(
     label: 'Stabilisant',
     unit: 'mg/L',
@@ -105,7 +83,6 @@ enum WaterParameter {
     decimals: 0,
   ),
 
-  /// Sel : uniquement pour les bassins à électrolyse.
   salt(
     label: 'Sel',
     unit: 'g/L',
@@ -117,8 +94,6 @@ enum WaterParameter {
     decimals: 1,
   ),
 
-  /// Température : elle ne se corrige pas, mais elle commande la durée de
-  /// filtration et la consommation de chlore.
   temperature(
     label: 'Température',
     unit: '°C',
@@ -148,12 +123,8 @@ enum WaterParameter {
   final double acceptableMin;
   final double acceptableMax;
 
-  /// Valeur visee par une correction. Ce n'est pas le milieu de la plage
-  /// idéale : pour le pH on vise 7,2 parce que c'est le meilleur compromis
-  /// entre efficacité du chlore et confort des yeux.
   final double target;
 
-  /// Nombre de décimales à l'affichage.
   final int decimals;
 
   ParameterStatus statusOf(double? value) {
@@ -175,7 +146,6 @@ enum WaterParameter {
     return ParameterStatus.ideal;
   }
 
-  /// Formate une valeur pour l'affichage, avec virgule décimale.
   String formatValue(double value) {
     final String text = value.toStringAsFixed(decimals);
     final String withComma = text.replaceAll('.', ',');
@@ -183,24 +153,13 @@ enum WaterParameter {
   }
 }
 
-/// Origine d'une mesure.
-///
-/// Une bandelette et une sonde non calibrée ne se valent pas : l'historique
-/// doit permettre de les distinguer (addendum § 5). La distinction prépare
-/// aussi l'arrivée d'une vraie sonde de température.
 enum MeasurementSource {
-  /// Saisie par l'utilisateur : bandelette, pastille, testeur électronique.
+
   manual,
 
-  /// Remontée automatiquement par une sonde du module.
   sensor,
 }
 
-/// Une série de mesures prise à un instant donné.
-///
-/// Tous les paramètres sont optionnels : on saisit ce qu'on à mesure. Une
-/// valeur absente n'est jamais interpretee comme un zéro, sinon un pH non
-/// mesure declencherait une correction massive.
 class WaterReading {
   const WaterReading({
     required this.takenAt,
@@ -227,11 +186,8 @@ class WaterReading {
   final double? temperature;
   final String? note;
 
-  /// Origine de la mesure. Par défaut une saisie : une mesure dont on ne sait
-  /// rien vient de l'utilisateur, pas d'une sonde.
   final MeasurementSource source;
 
-  /// Aucune valeur saisie : le moteur ne doit produire aucune recommandation.
   bool get isEmpty =>
       ph == null &&
       freeChlorine == null &&
@@ -313,9 +269,6 @@ class WaterReading {
     };
   }
 
-  /// Reconstruit une mesure. Une date illisible retombe sur l'epoque Unix
-  /// plutôt que sur l'heure courante : le domaine ne lit jamais l'horloge, et
-  /// une date fausse mais stable reste comparable d'un lancement à l'autre.
   factory WaterReading.fromJson(Object? raw) {
     final Map<String, dynamic> json = asJsonMap(raw);
     return WaterReading(
@@ -333,8 +286,7 @@ class WaterReading {
       salt: readNullableDouble(json, 'salt'),
       temperature: readNullableDouble(json, 'temperature'),
       note: readNullableString(json, 'note'),
-      // Une origine illisible vaut « saisie » : on ne prête pas à une mesure
-      // la crédibilité d'une sonde sans preuve.
+
       source: readEnum(
         json,
         'source',

@@ -32,10 +32,8 @@ void main() {
   late WokwiMqttDriver driver;
   late TelemetryController controller;
 
-  /// Mesures que la règle d'échantillonnage a fait enregistrer.
   late List<WaterReading> recorded;
 
-  /// Dernière mesure de sonde « en base », relue par le contrôleur.
   WaterReading? storedSensorReading;
 
   void build({bool withDriver = true}) {
@@ -99,16 +97,13 @@ void main() {
       await deliver(_telemetry());
       expect(controller.state.isFresh, isTrue);
 
-      // « 0 » publié par le broker au nom de l'ESP32 disparu.
       transport.deliver(_settings.topicOnline, '0');
       await pumpEventQueue();
 
-      // Un module hors ligne rend sa dernière trame non représentative, quel
-      // que soit son âge.
       expect(controller.state.isModuleOnline, isFalse);
       expect(controller.state.isFresh, isFalse);
       expect(controller.state.hasLiveValues, isFalse);
-      // La trame reste disponible pour affichage historique.
+
       expect(controller.state.telemetry, isNotNull);
     });
 
@@ -117,7 +112,6 @@ void main() {
       await deliver(_telemetry());
       expect(controller.state.isFresh, isTrue);
 
-      // Le module publie toutes les 2 s : à 11 s, quatre trames sont perdues.
       now = now.add(const Duration(seconds: 11));
       controller.refreshFreshness();
 
@@ -131,8 +125,6 @@ void main() {
         transport.failuresBeforeSuccess = 1;
         await controller.start();
 
-        // Une liaison en panne n'empêche ni la saisie manuelle ni le calcul des
-        // doses : on l'affiche et on continue.
         expect(controller.state.errorMessage, isNotNull);
         expect(controller.state.errorMessage, isNot(contains('Exception')));
         expect(controller.state.isModuleOnline, isFalse);
@@ -156,8 +148,7 @@ void main() {
       expect(recorded.length, 1);
       expect(recorded.first.ph, 7.24);
       expect(recorded.first.temperature, 26.4);
-      // Marquée comme venant d'une sonde : une sonde non calibrée et une
-      // bandelette ne se valent pas.
+
       expect(recorded.first.source, MeasurementSource.sensor);
       expect(controller.samplesRecorded, 1);
     });
@@ -165,14 +156,13 @@ void main() {
     test('43 200 trames par jour ne donnent pas 43 200 lignes', () async {
       await controller.start();
 
-      // Une heure de télémétrie toutes les 2 s, à valeur stable.
       for (int step = 0; step < 1800; step++) {
         now = now.add(const Duration(seconds: 2));
         await deliver(_telemetry(ph: 7.24, tempC: 26.4));
       }
 
       expect(controller.framesReceived, 1800);
-      // Seule la première est retenue : rien n'a bougé ensuite.
+
       expect(recorded.length, 1);
     });
 
@@ -181,12 +171,10 @@ void main() {
       await deliver(_telemetry(ph: 7.20, tempC: 26.0));
       expect(recorded.length, 1);
 
-      // Même variation, mais avant l'heure : refusée.
       now = now.add(const Duration(minutes: 30));
       await deliver(_telemetry(ph: 7.50, tempC: 26.0));
       expect(recorded.length, 1);
 
-      // Après l'heure : acceptée.
       now = now.add(const Duration(minutes: 31));
       await deliver(_telemetry(ph: 7.50, tempC: 26.0));
       expect(recorded.length, 2);
@@ -194,7 +182,7 @@ void main() {
     });
 
     test('la référence survit à un redémarrage de l’application', () async {
-      // Une mesure de sonde est déjà en base, prise il y a dix minutes.
+
       storedSensorReading = WaterReading(
         takenAt: now.subtract(const Duration(minutes: 10)),
         ph: 7.20,
@@ -205,8 +193,6 @@ void main() {
       await controller.start();
       await deliver(_telemetry(ph: 7.80, tempC: 26.0));
 
-      // Le rythme d'une heure doit survivre au redémarrage : la trame est
-      // refusée même si le pH a bougé de 0,6.
       expect(recorded, isEmpty);
     });
 
@@ -223,13 +209,12 @@ void main() {
     });
 
     test('si l’écriture échoue, la référence n’avance pas', () async {
-      // Sinon le point suivant serait comparé à une mesure qui n'existe pas
-      // en base, et l'historique resterait vide sans qu'on le sache.
+
       controller.dispose();
       controller = TelemetryController(
         driver: driver,
         clock: () => now,
-        // L'écriture échoue systématiquement.
+
         onSample: (WaterReading reading) async => null,
         lastSensorReading: () async => null,
       );
@@ -238,7 +223,6 @@ void main() {
       await deliver(_telemetry(ph: 7.2));
       expect(controller.samplesRecorded, 0);
 
-      // La trame suivante est de nouveau candidate, pas ignorée.
       now = now.add(const Duration(hours: 2));
       await deliver(_telemetry(ph: 7.2));
       expect(controller.samplesRecorded, 0);
@@ -260,7 +244,7 @@ void main() {
     });
 
     test('un échec laisse un message affichable et relève l’erreur', () async {
-      // Pas de start() : le transport n'est pas connecté.
+
       await expectLater(
         controller.testConnection(),
         throwsA(isA<DeviceException>()),
@@ -275,8 +259,7 @@ void main() {
     });
 
     test('start ne fait rien et ne signale pas d’erreur', () async {
-      // Une piscine en simulation n'a simplement pas de télémétrie : ce n'est
-      // pas une panne.
+
       await controller.start();
 
       expect(controller.state.isModuleOnline, isFalse);

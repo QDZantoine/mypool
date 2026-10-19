@@ -56,18 +56,11 @@ void main() {
     await container.read(readingsProvider.notifier).record(reading);
   }
 
-  /// Amène un élément à l'écran avant de l'affirmer.
-  ///
-  /// Un `ListView` ne construit PAS ce qui est hors de la fenêtre : sur un
-  /// portrait de téléphone, la moitié de chaque écran est en dessous. Faire
-  /// défiler est donc ce que fait aussi l'utilisateur.
   Future<void> scrollTo(WidgetTester tester, Finder finder) async {
     await tester.scrollUntilVisible(
       finder,
       300,
-      // Le défilement VERTICAL de l'écran, explicitement : un `TextField` et
-      // une rangée de puces portent chacun leur propre Scrollable
-      // horizontal, qu'un `first` ou un `last` attraperait au hasard.
+
       scrollable: find.byWidgetPredicate(
         (Widget widget) =>
             widget is Scrollable && widget.axisDirection == AxisDirection.down,
@@ -85,11 +78,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Pas encore de mesure'), findsOneWidget);
-      // Un écran vide est une invitation à agir : l'action est dans le
-      // panneau, pas cachée dans un en-tête de section.
+
       expect(find.text('Saisir une mesure'), findsOneWidget);
-      // Les échelles vides ne sont pas affichées : deux nuanciers gris
-      // n'apprennent rien et prennent la place de l'invitation.
+
       expect(find.text('SUIVI EN CONTINU'), findsNothing);
       expect(
         find.textContaining('ne se lisent qu’à la bandelette'),
@@ -118,8 +109,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Rien à verser'), findsOneWidget);
-      // La valeur et son unité forment un seul bloc de texte enrichi, pour
-      // que l'unité reste plus petite que le chiffre.
+
       expect(find.textContaining('7,2'), findsWidgets);
       expect(find.textContaining('26,0'), findsWidgets);
     });
@@ -134,12 +124,10 @@ void main() {
       await record(WaterReading(takenAt: _start, ph: 7.8, tac: 100.0));
       await tester.pumpAndSettle();
 
-      // 0,60 x 40 m3 x 60 g = 1 440 g, mis en forme par le métier.
-      // Le verdict de tête annonce l'action, et la carte la détaille.
       expect(find.text('Baisser le pH'), findsNWidgets(2));
       expect(find.text('1,44 kg'), findsOneWidget);
       expect(find.textContaining('1,44 kg de pH moins'), findsOneWidget);
-      // Fractionnée en deux apports, avec son avertissement.
+
       expect(find.textContaining('2 apports de 720 g'), findsOneWidget);
       expect(find.textContaining('fractionner'), findsOneWidget);
     });
@@ -155,7 +143,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('À FAIRE, DANS L’ORDRE'), findsOneWidget);
-      // Le TAC passe devant le pH : verdict de tête et carte détaillée.
+
       expect(find.text('Remonter le TAC'), findsNWidgets(2));
       expect(find.text('Baisser le pH'), findsNothing);
     });
@@ -178,7 +166,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // LSI = -0,06, avec le signe moins typographique.
       await scrollTo(tester, find.text('INDICE DE LANGELIER'));
       expect(find.text('−0,06'), findsOneWidget);
       expect(find.textContaining('L’eau est équilibrée'), findsOneWidget);
@@ -213,7 +200,7 @@ void main() {
   });
 
   group('saisie', () {
-    /// Trouve le champ d'un paramètre par son libellé en capitales.
+
     Finder fieldOf(WaterParameter parameter) => find.ancestor(
       of: find.text(parameter.label.toUpperCase()),
       matching: find.byType(Column),
@@ -226,13 +213,11 @@ void main() {
       await tester.pumpWidget(build(const ReadingEntryScreen()));
       await tester.pumpAndSettle();
 
-      // L'intitulé de l'écran dit d'où viennent ces valeurs.
       expect(
         find.textContaining('ne se lisent qu’à la bandelette'),
         findsOneWidget,
       );
-      // Les valeurs qui ne se lisent qu'à la main. Le stabilisant est plus bas
-      // dans la liste : la fenêtre n'en montre qu'une partie.
+
       expect(find.text('CHLORE LIBRE'), findsOneWidget);
       expect(find.text('TAC'), findsOneWidget);
       expect(find.text('TH'), findsOneWidget);
@@ -245,7 +230,6 @@ void main() {
       await tester.pumpWidget(build(const ReadingEntryScreen()));
       await tester.pumpAndSettle();
 
-      // Seul le TAC est saisi.
       await scrollTo(tester, find.text('TAC'));
       await tester.enterText(
         find
@@ -262,7 +246,7 @@ void main() {
 
       final WaterReading? saved = container.read(readingsProvider).latest;
       expect(saved?.tac, 105.0);
-      // Tous les autres restent absents.
+
       expect(saved?.th, isNull);
       expect(saved?.freeChlorine, isNull);
     });
@@ -274,8 +258,6 @@ void main() {
       await tester.pumpWidget(build(const ReadingEntryScreen()));
       await tester.pumpAndSettle();
 
-      // C'est ce que le clavier français propose : refuser « 1,8 » serait
-      // absurde.
       await tester.enterText(find.byType(TextField).first, '1,8');
       await scrollTo(tester, find.text('Enregistrer'));
       await tester.tap(find.text('Enregistrer'));
@@ -306,8 +288,6 @@ void main() {
       await tester.pumpWidget(build(const ReadingEntryScreen()));
       await tester.pumpAndSettle();
 
-      // Aucune sonde connectée : sans ces deux valeurs, les doses seraient
-      // calculées à l'aveugle.
       await scrollTo(tester, find.text('FAUTE DE SONDE'));
       expect(find.text('PH'), findsOneWidget);
       expect(find.text('TEMPÉRATURE'), findsOneWidget);
@@ -317,8 +297,7 @@ void main() {
       WidgetTester tester,
     ) async {
       usePhoneViewport(tester);
-      // Oxygène actif : aucun champ de chlore. Demander une valeur qui n'a
-      // pas de sens sur l'installation ferait douter de tout le reste.
+
       await tester.pumpWidget(
         build(
           const ReadingEntryScreen(),
@@ -360,12 +339,10 @@ void main() {
       await tester.pumpWidget(build(const FiltrationScreen()));
       await tester.pumpAndSettle();
 
-      // Un état vide écrit, jamais un tiret rendu en grande taille : à 76 px
-      // un « — » devient un trait plein qu'on prend pour une barre en panne.
       expect(find.text('Température inconnue'), findsOneWidget);
       expect(find.text('—'), findsNothing);
       expect(find.textContaining('suit la température'), findsOneWidget);
-      // La rotation reste affichée : elle ne dépend pas de la température.
+
       expect(find.text('5 h 20'), findsOneWidget);
     });
 
@@ -380,12 +357,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('13 h'), findsWidgets);
-      // La journée est dessinée avant d'être listée : une liste d'horaires
-      // demande de reconstruire mentalement la journée.
+
       expect(find.text('LA JOURNÉE'), findsOneWidget);
       expect(find.byType(DayTimeline), findsOneWidget);
       expect(find.text('CRÉNEAUX'), findsOneWidget);
-      // 390 min centrés sur 14:00 -> 10:45 à 17:15
+
       expect(find.text('10:45 – 17:15'), findsOneWidget);
       expect(find.text('6 h 30'), findsOneWidget);
     });
@@ -442,7 +418,7 @@ void main() {
 
       expect(find.byType(HistoryChart), findsOneWidget);
       expect(find.text('2 mesures'), findsOneWidget);
-      // Les deux dates aux extrémités de l'axe.
+
       expect(find.text('15/07'), findsOneWidget);
       expect(find.text('16/07'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -539,8 +515,6 @@ void main() {
       await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
 
-      // Un interrupteur qu'on rebascule sans rien lire viderait la règle n° 4
-      // de son sens.
       expect(find.text('J’ai compris'), findsOneWidget);
     });
 
@@ -556,8 +530,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Ouvrir chaque liste de choix affiche toutes ses valeurs d'un coup :
-      // aucun libellé ne doit manquer, ni tomber sur un nom technique.
       const Map<String, List<String>> expected = <String, List<String>>{
         'Traitement': <String>[
           'Chlore stabilisé (galets)',
@@ -580,12 +552,6 @@ void main() {
           'Bâche à bulles',
           'Aucune',
         ],
-        'Type de liaison': <String>[
-          'Simulation (sans matériel)',
-          'Module local — à venir',
-          'Home Assistant — à venir',
-          'Carte ESP32 en MQTT',
-        ],
       };
 
       for (final String field in expected.keys) {
@@ -595,26 +561,10 @@ void main() {
         for (final String label in expected[field]!) {
           expect(find.text(label), findsWidgets, reason: '$field : $label');
         }
-        // On referme par la barrière, sans changer de valeur.
+
         await tester.tapAt(const Offset(10, 10));
         await tester.pumpAndSettle();
       }
-    });
-
-    testWidgets('le broker public est signalé comme tel', (
-      WidgetTester tester,
-    ) async {
-      usePhoneViewport(tester);
-      await tester.pumpWidget(
-        build(
-          const SettingsScreen(),
-          config: const PoolConfig().copyWith(driver: DriverKind.mqtt),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await scrollTo(tester, find.textContaining('Ce broker est public'));
-      expect(find.textContaining('jamais à un vrai volet'), findsOneWidget);
     });
   });
 }

@@ -6,11 +6,6 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'theme.dart';
 
-/// Écran de lancement (Splash Screen) avec animations :
-/// - Nuage qui apparaît en flottant
-/// - Goutte d'eau qui tombe du nuage
-/// - Effet d'onde/piscine à l'impact de la goutte
-/// - Titre et sous-titre AquaControl
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,7 +17,6 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late final AnimationController _mainController;
 
-  // Animations dérivées
   late final Animation<double> _cloudFade;
   late final Animation<Offset> _cloudSlide;
   late final Animation<double> _dropFall;
@@ -43,7 +37,6 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 2600),
     );
 
-    // 1. Nuage (0.0 -> 0.35)
     _cloudFade = CurvedAnimation(
       parent: _mainController,
       curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
@@ -56,7 +49,6 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
 
-    // 2. Goutte d'eau (0.3 -> 0.65)
     _dropFall = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
@@ -84,7 +76,6 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
 
-    // 3. Onde / Vague de la piscine (0.6 -> 0.9)
     _rippleScale = Tween<double>(begin: 0.2, end: 2.2).animate(
       CurvedAnimation(
         parent: _mainController,
@@ -98,7 +89,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // 4. Titre AquaControl (0.5 -> 0.85)
     _titleFade = CurvedAnimation(
       parent: _mainController,
       curve: const Interval(0.5, 0.85, curve: Curves.easeIn),
@@ -170,7 +160,7 @@ class _SplashScreenState extends State<SplashScreen>
           decoration: BoxDecoration(gradient: bgGradient),
           child: Stack(
             children: [
-              // Motif arrière-plan piscine (vagues de fond)
+
               Positioned.fill(
                 child: CustomPaint(
                   painter: _PoolBackgroundPainter(
@@ -187,7 +177,6 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     const SizedBox(height: 40),
 
-                    // Zone Animation : Nuage + Goutte + Bassin
                     SizedBox(
                       width: 260,
                       height: 240,
@@ -197,13 +186,13 @@ class _SplashScreenState extends State<SplashScreen>
                           return Stack(
                             alignment: Alignment.center,
                             children: [
-                              // 1. Bassin de la piscine & effet d'onde
+
                               Positioned(
                                 bottom: 20,
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
-                                    // Onde d'impact
+
                                     Transform.scale(
                                       scale: _rippleScale.value,
                                       child: Opacity(
@@ -224,7 +213,6 @@ class _SplashScreenState extends State<SplashScreen>
                                       ),
                                     ),
 
-                                    // Illustration du bassin de piscine
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 24,
@@ -250,11 +238,11 @@ class _SplashScreenState extends State<SplashScreen>
                                           ),
                                         ],
                                       ),
-                                      child: Row(
+                                      child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
-                                        children: const [
+                                        children: [
                                           Icon(
                                             Icons.pool_rounded,
                                             color: Colors.white,
@@ -277,7 +265,6 @@ class _SplashScreenState extends State<SplashScreen>
                                 ),
                               ),
 
-                              // 2. Trajectoire de la goutte d'eau (tombe du nuage vers la piscine)
                               Positioned(
                                 top: 75 + (_dropFall.value * 95),
                                 child: Transform.scale(
@@ -311,7 +298,6 @@ class _SplashScreenState extends State<SplashScreen>
                                 ),
                               ),
 
-                              // 3. Nuage animé (en haut)
                               Positioned(
                                 top: 15,
                                 child: SlideTransition(
@@ -367,7 +353,6 @@ class _SplashScreenState extends State<SplashScreen>
 
                     const SizedBox(height: 30),
 
-                    // Titre & Branding
                     SlideTransition(
                       position: _titleSlide,
                       child: FadeTransition(
@@ -399,7 +384,6 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              // Indication "Toucher pour passer" en bas
               Positioned(
                 bottom: 30,
                 left: 0,
@@ -426,7 +410,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-/// Painter pour le motif ondulé d'arrière-plan de la piscine
 class _PoolBackgroundPainter extends CustomPainter {
   const _PoolBackgroundPainter({required this.color});
 

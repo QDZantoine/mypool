@@ -1,19 +1,15 @@
 import 'json_tolerant.dart';
 
-/// Modèle d'entrée d'historique de mesure de pH.
 class PhHistoryEntry {
   const PhHistoryEntry({
     required this.timestamp,
     required this.ph,
   });
 
-  /// Date et heure du relevé.
   final DateTime timestamp;
 
-  /// Valeur mesurée du pH (ex: 7.2).
   final double ph;
 
-  /// Lecture tolérante depuis un objet JSON (supporte InfluxDB _value/_time).
   factory PhHistoryEntry.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> map = asJsonMap(json);
 
@@ -33,7 +29,6 @@ class PhHistoryEntry {
     );
   }
 
-  /// Export vers JSON.
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'timestamp': timestamp.toIso8601String(),
@@ -41,7 +36,6 @@ class PhHistoryEntry {
     };
   }
 
-  /// Copie modifiable immuable.
   PhHistoryEntry copyWith({
     DateTime? timestamp,
     double? ph,

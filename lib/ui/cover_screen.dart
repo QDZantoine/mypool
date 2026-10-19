@@ -12,11 +12,6 @@ import 'widgets/safety_consent_sheet.dart';
 import 'widgets/section_header.dart';
 import 'widgets/value_display.dart';
 
-/// Écran de pilotage du volet.
-///
-/// Il ne calcule rien et ne décide rien : les deux boutons appellent
-/// [CoverController], qui porte les règles de sécurité. L'écran se contente
-/// de refléter l'état et d'expliquer ce qui bloque.
 class CoverScreen extends ConsumerWidget {
   const CoverScreen({super.key});
 
@@ -96,10 +91,9 @@ class CoverScreen extends ConsumerWidget {
                     disabledExplanation: canOperate
                         ? null
                         : 'Avertissement à accepter',
-                    // Doigt posé : la commande part et se répète.
+
                     onPressStart: () => controller.pressOpen(),
-                    // Doigt relevé : la répétition s'arrête. Aucun ordre
-                    // d'arrêt n'est envoyé, le matériel s'arrête seul.
+
                     onPressEnd: () => controller.release(),
                   ),
                 ),
@@ -137,7 +131,6 @@ class CoverScreen extends ConsumerWidget {
   }
 }
 
-/// Position estimée, en grand, avec la mention qui va avec.
 class _PositionCard extends StatelessWidget {
   const _PositionCard({required this.status});
 
@@ -167,9 +160,7 @@ class _PositionCard extends StatelessWidget {
               size: ValueSize.large,
             ),
             const SizedBox(height: 12),
-            // Une barre franche plutôt qu'un filet : c'est la seule
-            // représentation de la position, elle doit se lire d'un coup
-            // d'œil au soleil.
+
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
@@ -192,8 +183,7 @@ class _PositionCard extends StatelessWidget {
                       : theme.colorScheme.outline,
                 ),
                 const SizedBox(width: 8),
-                // Flexible : « Ouverture en cours » déborde d'un écran étroit
-                // si on le laisse à sa largeur naturelle.
+
                 Expanded(
                   child: Text(
                     _motionLabel(cover.motion),
@@ -204,10 +194,7 @@ class _PositionCard extends StatelessWidget {
             ),
             if (cover.isEstimated) ...[
               const SizedBox(height: 12),
-              // RÈGLE DE SÉCURITÉ N° 6 : sans capteur de fin de course, la
-              // position est une estimation et doit être affichée comme telle.
-              // La formulation dit d'où vient le chiffre, pas seulement qu'il
-              // est approximatif.
+
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[

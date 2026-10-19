@@ -10,11 +10,6 @@ import '../state/providers.dart';
 import 'theme.dart';
 import 'widgets/safety_consent_sheet.dart';
 
-/// Réglages : le bassin, les produits, la liaison.
-///
-/// Deux réglages ont un effet direct sur la justesse des doses, et l'écran le
-/// dit : le VOLUME, qui multiplie tout, et la CONCENTRATION des produits, qui
-/// divise tout.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -187,9 +182,7 @@ class SettingsScreen extends ConsumerWidget {
                     .setSafetyConsent(given: false);
                 return;
               }
-              // Réactiver passe toujours par la relecture de l'avertissement :
-              // un interrupteur qu'on rebascule sans rien lire viderait la
-              // règle n° 4 de son sens.
+
               final bool accepted = await SafetyConsentSheet.show(context);
               if (accepted) {
                 await ref
@@ -256,7 +249,6 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Réglages de liaison, et test de la liaison.
 class _LinkSection extends ConsumerWidget {
   const _LinkSection({required this.config});
 
@@ -264,99 +256,20 @@ class _LinkSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ThemeData theme = Theme.of(context);
     final MqttSettings mqtt = ref.watch(mqttSettingsProvider);
 
-    return Column(
-      children: <Widget>[
-        Card(
-          child: _EnumTile<DriverKind>(
-            label: 'Type de liaison',
-            value: config.driver,
-            values: DriverKind.values,
-            nameOf: _driverLabel,
-            onChanged: (DriverKind value) =>
-                ref.read(poolConfigProvider.notifier).edit(driver: value),
-          ),
+    return Card(
+      child: ListTile(
+        title: const Text('Tester la liaison'),
+        subtitle: Text(
+          mqtt.isUsable
+              ? 'Demande son état au module et mesure le délai.'
+              : 'Renseignez d’abord l’adresse et l’identifiant.',
         ),
-        if (config.driver == DriverKind.mqtt)
-          Card(
-            child: Column(
-              children: <Widget>[
-                _TextTile(
-                  label: 'Adresse du broker',
-                  value: mqtt.host,
-                  onChanged: (String value) =>
-                      ref.read(mqttSettingsProvider.notifier).edit(host: value),
-                ),
-                _NumberTile(
-                  label: 'Port',
-                  unit: '',
-                  value: mqtt.port.toDouble(),
-                  onChanged: (double value) => ref
-                      .read(mqttSettingsProvider.notifier)
-                      .edit(port: value.round()),
-                ),
-                _TextTile(
-                  label: 'Identifiant de l’installation',
-                  value: mqtt.deviceId,
-                  helper:
-                      'Au moins ${MqttSettings.minimumDeviceIdLength} '
-                      'caractères, tirés au hasard. Sur un broker public, '
-                      'c’est la seule chose qui sépare votre bassin de celui '
-                      'des autres.',
-                  onChanged: (String value) => ref
-                      .read(mqttSettingsProvider.notifier)
-                      .edit(deviceId: value),
-                ),
-                _TextTile(
-                  label: 'Nom d’utilisateur (optionnel)',
-                  value: mqtt.username ?? '',
-                  onChanged: (String value) => ref
-                      .read(mqttSettingsProvider.notifier)
-                      .edit(username: value.isEmpty ? null : value),
-                ),
-                _TextTile(
-                  label: 'Mot de passe (optionnel)',
-                  value: mqtt.password ?? '',
-                  onChanged: (String value) => ref
-                      .read(mqttSettingsProvider.notifier)
-                      .edit(password: value.isEmpty ? null : value),
-                ),
-                if (mqtt.isPublicBroker)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Icon(Icons.warning_amber_rounded, color: AppTheme.acid),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Ce broker est public : n’importe qui peut y '
-                            'publier. Réservez-le à la simulation, jamais à '
-                            'un vrai volet.',
-                            style: theme.textTheme.bodyLarge,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ListTile(
-                  title: const Text('Tester la liaison'),
-                  subtitle: Text(
-                    mqtt.isUsable
-                        ? 'Demande son état au module et mesure le délai.'
-                        : 'Renseignez d’abord l’adresse et l’identifiant.',
-                  ),
-                  trailing: const Icon(Icons.network_check),
-                  enabled: mqtt.isUsable,
-                  onTap: mqtt.isUsable ? () => _testLink(context, ref) : null,
-                ),
-              ],
-            ),
-          ),
-      ],
+        trailing: const Icon(Icons.network_check),
+        enabled: mqtt.isUsable,
+        onTap: mqtt.isUsable ? () => _testLink(context, ref) : null,
+      ),
     );
   }
 
@@ -375,22 +288,7 @@ class _LinkSection extends ConsumerWidget {
         ),
       );
     } on DeviceException catch (error) {
-      // Le message est déjà en français et affichable : aucune trace
-      // technique n'atteint l'écran.
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
-    }
-  }
-
-  static String _driverLabel(DriverKind kind) {
-    switch (kind) {
-      case DriverKind.simulation:
-        return 'Simulation (sans matériel)';
-      case DriverKind.localModule:
-        return 'Module local — à venir';
-      case DriverKind.homeAssistant:
-        return 'Home Assistant — à venir';
-      case DriverKind.mqtt:
-        return 'Carte ESP32 en MQTT';
     }
   }
 }
@@ -454,9 +352,6 @@ class _NumberTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
 
-    // La valeur est sur la même ligne que le libellé, et l'explication passe
-    // DESSOUS. L'inverse — vu sur appareil — faisait lire quatre lignes de
-    // texte avant d'arriver au chiffre qu'on venait chercher.
     return ListTile(
       title: Row(
         children: <Widget>[
@@ -506,8 +401,7 @@ class _TextTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
-    this.helper,
-  });
+  }) : helper = null;
 
   final String label;
   final String value;
@@ -598,7 +492,6 @@ class _Section extends StatelessWidget {
   }
 }
 
-/// Demande un nombre. Accepte la virgule décimale.
 Future<double?> _askNumber(
   BuildContext context, {
   required String title,
@@ -632,12 +525,6 @@ Future<String?> _askText(
   );
 }
 
-/// Le contrôleur de saisie appartient au dialogue lui-même.
-///
-/// Le libérer depuis la fonction appelante, juste après `showDialog`, le
-/// détruisait alors que le champ était encore dans l'arbre pendant
-/// l'animation de fermeture — ce qui faisait échouer une assertion de Flutter
-/// sur les dépendances de focus.
 class _NumberDialog extends StatefulWidget {
   const _NumberDialog({
     required this.title,
@@ -695,8 +582,7 @@ class _NumberDialogState extends State<_NumberDialog> {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(
-            // La virgule est acceptée : c'est ce que le clavier français
-            // propose.
+
             double.tryParse(_controller.text.trim().replaceAll(',', '.')),
           ),
           child: const Text('Valider'),

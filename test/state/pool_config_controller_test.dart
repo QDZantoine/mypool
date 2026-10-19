@@ -20,8 +20,7 @@ void main() {
 
   group('chargement', () {
     test('l’état initial est la piscine par défaut, pas un état d’attente', () {
-      // L'application doit être utilisable dès la première image : 40 m3 au
-      // chlore stabilisé, en simulation.
+
       expect(controller.state, const PoolConfig());
       expect(controller.state.volumeM3, 40.0);
       expect(controller.isLoaded, isFalse);
@@ -51,8 +50,7 @@ void main() {
       await controller.edit(volumeM3: 60.0);
 
       expect(controller.state.volumeM3, 60.0);
-      // Les autres champs gardent leur valeur : un écran qui ne saisit qu'un
-      // champ ne doit pas réinitialiser les autres.
+
       expect(controller.state.treatment, TreatmentType.stabilizedChlorine);
       expect(controller.state.pumpFlowM3PerHour, 10.0);
       expect(store.writeCount, 1);
@@ -74,15 +72,13 @@ void main() {
       await controller.edit(lengthM: 10.0, widthM: 5.0, averageDepthM: 1.5);
       await controller.useVolumeFromDimensions();
 
-      // 10 x 5 x 1,5 = 75 m3
       expect(controller.state.volumeM3, closeTo(75.0, 1e-9));
     });
 
     test(
       'declareProduct change la concentration utilisée pour les doses',
       () async {
-        // C'est ce qui rend les doses justes : un chlore à 56 % pris pour du
-        // 90 % donne un tiers de dose en moins.
+
         await controller.declareProduct(
           ChemicalInventory.defaultFor(ChemicalRole.chlorineSlow)
               .copyWith(activePercent: 56.0, label: 'Mes galets'),
@@ -93,14 +89,14 @@ void main() {
         );
         expect(declared.activePercent, 56.0);
         expect(declared.label, 'Mes galets');
-        // Les autres produits ne bougent pas.
+
         expect(
           controller.state.inventory
               .forRole(ChemicalRole.phMinus)
               .activePercent,
           100.0,
         );
-        // Et la déclaration est persistée.
+
         expect(
           (await store.loadPoolConfig()).inventory
               .forRole(ChemicalRole.chlorineSlow)
@@ -117,7 +113,7 @@ void main() {
     });
 
     test('il est persisté une fois donné', () async {
-      // Le redemander à chaque ouverture le transformerait en clic réflexe.
+
       await controller.setSafetyConsent(given: true);
 
       expect(controller.state.safetyConsentGiven, isTrue);
@@ -146,7 +142,7 @@ void main() {
 
     test('l’état initial pointe le broker de simulation, sans identifiant', () {
       expect(mqtt.state.host, MqttSettings.defaultHost);
-      // Aucun identifiant par défaut : il doit être tiré au hasard.
+
       expect(mqtt.state.deviceId, '');
       expect(mqtt.state.isUsable, isFalse);
     });
@@ -174,7 +170,7 @@ void main() {
     });
 
     test('les réglages du bassin et du broker sont indépendants', () async {
-      // On remplace un broker sans toucher au volume du bassin.
+
       await controller.edit(volumeM3: 60.0);
       await mqtt.edit(deviceId: 'a7f3c1e9b2xx');
 

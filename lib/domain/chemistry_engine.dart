@@ -3,130 +3,42 @@ import '../models/dose_recommendation.dart';
 import '../models/pool_config.dart';
 import '../models/water_reading.dart';
 
-/// Moteur de dosage (annexe À.2 à À.5).
-///
-/// PUR : aucun import Flutter, aucun accès disque ou réseau, aucune lecture de
-/// l'horloge. Tout entre par paramètre, ce qui rend chaque coefficient
-/// vérifiable par un calcul à la main.
-///
-/// Principe commun à toutes les doses : on calcule d'abord une masse de
-/// Matière ACTIVE nécessaire dans l'eau, puis on la divise par la concentration
-/// du produit DÉCLARÉ par l'utilisateur. Aucune concentration n'est figée ici.
 class ChemistryEngine {
-  // ---------------------------------------------------------------------------
-  // Coefficients (annexe À). Chacun porte son unité et son origine.
-  // ---------------------------------------------------------------------------
 
-  /// Grammes de matière active par m3 pour déplacer le pH d'UNE unité complète,
-  /// au TAC de référence de 100 mg/L (annexe À.2).
-  ///
-  /// Cas de vérification : pH 7,8 -> 7,2 dans 40 m3 à TAC 100
-  /// = 0,60 x 40 x 60 x (100 / 100) = 1 440 g.
   static const double phGramsPerM3PerUnitAtTac100 = 60.0;
 
-  /// TAC de référence des coefficients de pH, en mg/L.
-  ///
-  /// La dose de correcteur de pH est proportionnelle au TAC : le TAC est le
-  /// pouvoir tampon de l'eau, c'est exactement ce qui résiste au changement de
-  /// pH. À TAC 200 il faut donc deux fois plus de produit qu'a TAC 100.
   static const double referenceTacMgL = 100.0;
 
-  /// Déplacement de pH maximal par apport, en unités de pH (annexe À.2).
-  ///
-  /// Au-delà, l'apport crée un point de concentration acide qui attaque le
-  /// liner et fausse la mesure suivante. C'est ce pas qui donne 2 apports pour
-  /// un écart de 0,60.
   static const double maxPhStepPerDose = 0.30;
 
-  /// Écart de pH en dessous duquel on ne dose pas.
-  ///
-  /// 0,1 unité est l'ordre de grandeur de l'incertitude d'un testeur
-  /// colorimétrique : doser pour moins que cela consomme du produit sans effet
-  /// mesurable.
   static const double minPhGap = 0.10;
 
-  /// Grammes de bicarbonate de sodium pur par m3 pour +1 mg/L de TAC
-  /// (annexe À.4).
-  ///
-  /// Cas de vérification : TAC 50 -> 80 dans 40 m3
-  /// = 30 x 40 x 1,8 = 2 160 g.
   static const double tacUpGramsPerM3PerMgL = 1.8;
 
-  /// Grammes d'acide pur par m3 pour -1 mg/L de TAC.
-  ///
-  /// HYPOTHÈSE : valeur usuelle des fiches produit, l'annexe À ne fournit pas
-  /// de cas de vérification pour la baisse de TAC. À confirmer.
   static const double tacDownGramsPerM3PerMgL = 1.5;
 
-  /// Variation de TAC maximale par apport, en mg/L (annexe À.4).
-  ///
-  /// Donne 2 apports pour un écart de 30 mg/L. Un apport unique de bicarbonate
-  /// trouble l'eau et fait remonter le pH d'un coup.
   static const double maxTacStepPerDoseMgL = 20.0;
 
-  /// Part du stabilisant qui fixe le chlore libre à viser (annexe À.3).
-  ///
-  /// 7,5 % : plus le stabilisant est élevé, plus il freine le chlore, et plus
-  /// il faut de chlore libre pour obtenir la même désinfection.
   static const double stabilizerToChlorineRatio = 0.075;
 
-  /// Plafond absolu du chlore libre vise, en mg/L.
-  ///
-  /// Au-delà le bassin n'est plus baignable. Quand la règle des 7,5 % demande
-  /// davantage, la bonne reponse n'est pas plus de chlore mais un
-  /// renouvellement d'eau pour faire baisser le stabilisant.
   static const double maxTargetFreeChlorineMgL = 4.0;
 
-  /// Écart de chlore libre en dessous duquel on ne dose pas, en mg/L.
-  ///
-  /// 0,3 mg/L est la plus petite graduation lisible sur un testeur
-  /// colorimétrique : passer de 2,0 à 2,25 mg/L n'est ni mesurable ni utile.
   static const double minChlorineGapMgL = 0.30;
 
-  /// Facteur du traitement choc (annexe À.5).
-  ///
-  /// Point de rupture de la chloration : il faut environ 10 fois la teneur en
-  /// chlore combiné pour casser les chloramines. En dessous, on nourrit le
-  /// problème au lieu de le détruire.
   static const double shockMultiplier = 10.0;
 
-  /// Grammes de chlorure de calcium dihydrate pur par m3 pour +1 mg/L de TH.
-  ///
-  /// HYPOTHÈSE : stœchiométrie CaCl2.2H2O (147 g/mol) pour un TH exprimé en
-  /// équivalent CaCO3 (100 g/mol), soit 1,47. Arrondi à 1,48 pour couvrir la
-  /// pureté commerciale. L'annexe À ne fournit pas de cas de vérification.
   static const double hardnessGramsPerM3PerMgL = 1.48;
 
-  /// Grammes de matière active par m3 pour +1 mg/L d'un paramètre exprimé en
-  /// mg/L. C'est une identité d'unites (1 mg/L = 1 g/m3), pas un coefficient
-  /// empirique : elle vaut pour le chlore et pour le stabilisant.
   static const double gramsPerM3PerMgL = 1.0;
 
-  /// Grammes de sel par m3 pour +1 g/L de salinité. Identité d'unites egalement
-  /// (1 g/L = 1 000 g/m3).
   static const double gramsPerM3PerGPerL = 1000.0;
 
-  /// Marge de sécurité appliquee avant chaque `ceil()` de fractionnement.
-  ///
-  /// Sans elle, un besoin de 2,0 apports stocke comme 2,000000000000002 en
-  /// virgule flottante donnerait 3 apports.
   static const double splitEpsilon = 1e-9;
 
-  // ---------------------------------------------------------------------------
-  // Briques de calcul, publiques pour être testables une par une.
-  // ---------------------------------------------------------------------------
-
-  /// Arrondit un écart de mesure au centieme AVANT tout calcul.
-  ///
-  /// `7.8 - 7.2` vaut `0.6000000000000005` en virgule flottante. Sans cet
-  /// arrondi, le fractionnement passe de 2 à 3 apports pour une difference
-  /// invisible à l'affichage.
   static double roundGap(double gap) {
     return (gap * 100).roundToDouble() / 100;
   }
 
-  /// Nombre d'apports nécessaires pour couvrir `need` sans dépasser
-  /// `maxPerDose` à chaque fois.
   static int splitCount(double need, double maxPerDose) {
     if (maxPerDose <= 0 || need <= 0) {
       return 1;
@@ -135,20 +47,10 @@ class ChemistryEngine {
     return count < 1 ? 1 : count;
   }
 
-  /// Convertit une masse de matière active en quantité de produit à verser.
-  ///
-  /// C'est le seul endroit ou la concentration intervient : 400 g de chlore
-  /// actif font 444 g de galets à 90 %, 714 g de granulés à 56 % ou 4,17 L de
-  /// chlore liquide à 9,6 %.
   static double productQuantity(double activeGrams, ChemicalProduct product) {
     return activeGrams / product.activeFraction;
   }
 
-  /// Cible d'une correction.
-  ///
-  /// On ne vise pas le milieu de la plage mais son bord le plus proche : entrer
-  /// dans la plage suffit, et cela consomme le minimum de produit. Le pH est
-  /// l'exception, on vise 7,2 parce que c'est l'optimum d'efficacite du chlore.
   static double correctionTarget(WaterParameter parameter, double current) {
     if (parameter == WaterParameter.ph) {
       return parameter.target;
@@ -162,10 +64,6 @@ class ChemistryEngine {
     return current;
   }
 
-  /// Chlore libre à viser, en mg/L (annexe À.3).
-  ///
-  /// Règle des 7,5 % du stabilisant, plancher au bas de la plage idéale et
-  /// plafond à 4 mg/L. Sans mesure de stabilisant on vise la cible nominale.
   static double targetFreeChlorine(double? stabilizerMgL) {
     if (stabilizerMgL == null) {
       return WaterParameter.freeChlorine.target;
@@ -180,18 +78,10 @@ class ChemistryEngine {
     return fromStabilizer;
   }
 
-  /// Chlore libre à atteindre pour un traitement choc, en mg/L (annexe À.5).
   static double shockTargetFreeChlorine(double combinedChlorineMgL) {
     return combinedChlorineMgL * shockMultiplier;
   }
 
-  /// Volume d'eau à renouveler, en m3, pour ramener un paramètre non
-  /// éliminable de `current` à `target` (annexe À.4).
-  ///
-  /// Le stabilisant et le calcium ne se detruisent pas : la seule facon de
-  /// faire baisser leur concentration est de remplacer une part de l'eau.
-  /// Cas de vérification : stabilisant 80 -> 50 dans 40 m3
-  /// = 40 x (80 - 50) / 80 = 15 m3.
   static double waterRenewalM3({
     required double volumeM3,
     required double current,
@@ -203,14 +93,6 @@ class ChemistryEngine {
     return volumeM3 * (current - target) / current;
   }
 
-  // ---------------------------------------------------------------------------
-  // Corrections, une methode par paramètre.
-  // ---------------------------------------------------------------------------
-
-  /// Correction de pH (annexe À.2).
-  ///
-  /// Dose = écart de pH x volume x 60 g/m3 x (TAC / 100), divise par la
-  /// concentration du produit déclaré.
   static DoseRecommendation? phCorrection({
     required PoolConfig config,
     required double? ph,
@@ -225,13 +107,10 @@ class ChemistryEngine {
       return null;
     }
     if (WaterParameter.ph.statusOf(ph) == ParameterStatus.ideal) {
-      // 7,4 est un bon pH : on ne dose pas pour gagner 0,2 unité.
+
       return null;
     }
 
-    // Sans mesure de TAC, on suppose le TAC de référence : c'est le cas le plus
-    // fréquent et l'erreur reste proportionnelle, jamais d'un ordre de
-    // grandeur.
     final double tac = tacMgL ?? referenceTacMgL;
     final double bufferFactor = tac / referenceTacMgL;
 
@@ -276,7 +155,6 @@ class ChemistryEngine {
     );
   }
 
-  /// Correction de TAC (annexe À.4). Se fait AVANT le pH.
   static DoseRecommendation? alkalinityCorrection({
     required PoolConfig config,
     required double? tacMgL,
@@ -337,7 +215,6 @@ class ChemistryEngine {
     );
   }
 
-  /// Correction du chlore libre d'entretien (annexe À.3).
   static DoseRecommendation? chlorineCorrection({
     required PoolConfig config,
     required double? freeChlorineMgL,
@@ -348,14 +225,14 @@ class ChemistryEngine {
       return null;
     }
     if (!config.usesChlorine) {
-      // Brome ou oxygène actif : il n'y a pas de chlore à doser.
+
       return null;
     }
 
     final double target = targetFreeChlorine(stabilizerMgL);
 
     if (freeChlorineMgL > WaterParameter.freeChlorine.acceptableMax) {
-      // Le chlore en excès ne se retire pas : il se laisse consommer.
+
       return DoseRecommendation(
         parameter: WaterParameter.freeChlorine,
         priority: ActionPriority.chlorine,
@@ -376,13 +253,11 @@ class ChemistryEngine {
     }
 
     final double gap = roundGap(target - freeChlorineMgL);
-    // Sous la résolution du testeur, l'apport serait invisible à la mesure
-    // suivante et ferait douter de la recommandation.
+
     if (gap < minChlorineGapMgL) {
       return null;
     }
 
-    // Stabilisant saturé : ajouter du chlore stabilisé aggraverait la cause.
     final bool stabilizerSaturated =
         stabilizerMgL != null &&
         stabilizerMgL > WaterParameter.stabilizer.acceptableMax;
@@ -420,7 +295,6 @@ class ChemistryEngine {
     );
   }
 
-  /// Traitement choc contre les chloramines (annexe À.5).
   static DoseRecommendation? shockCorrection({
     required PoolConfig config,
     required double? combinedChlorineMgL,
@@ -438,14 +312,12 @@ class ChemistryEngine {
     }
 
     final double target = shockTargetFreeChlorine(combinedChlorineMgL);
-    // Le chlore libre déjà present compte dans la cible.
+
     final double gap = roundGap(target - (freeChlorineMgL ?? 0.0));
     if (gap <= 0) {
       return null;
     }
 
-    // Le choc se fait toujours avec un chlore non stabilisé : la dose est trop
-    // forte pour ajouter autant de stabilisant d'un coup.
     final ChemicalProduct product = config.inventory.forRole(
       ChemicalRole.chlorineShock,
     );
@@ -477,10 +349,6 @@ class ChemistryEngine {
     );
   }
 
-  /// Correction du stabilisant (annexe À.4).
-  ///
-  /// À la hausse c'est un dosage ; à la baisse c'est un renouvellement d'eau,
-  /// parce que l'acide cyanurique ne se détruit pas.
   static DoseRecommendation? stabilizerCorrection({
     required PoolConfig config,
     required double? stabilizerMgL,
@@ -530,7 +398,7 @@ class ChemistryEngine {
     }
 
     if (!config.usesChlorine) {
-      // Sans chlore, le stabilisant n'a aucune utilite.
+
       return null;
     }
 
@@ -561,7 +429,6 @@ class ChemistryEngine {
     );
   }
 
-  /// Correction du TH (durete calcique).
   static DoseRecommendation? hardnessCorrection({
     required PoolConfig config,
     required double? thMgL,
@@ -626,7 +493,6 @@ class ChemistryEngine {
     );
   }
 
-  /// Correction du sel, uniquement pour un bassin à électrolyse.
   static DoseRecommendation? saltCorrection({
     required PoolConfig config,
     required double? saltGPerL,
@@ -636,7 +502,7 @@ class ChemistryEngine {
       return null;
     }
     if (config.treatment != TreatmentType.salt) {
-      // Sans électrolyseur, la salinité n'a pas de consigne à respecter.
+
       return null;
     }
     if (WaterParameter.salt.statusOf(saltGPerL) == ParameterStatus.ideal) {
@@ -693,22 +559,11 @@ class ChemistryEngine {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Assemblage
-  // ---------------------------------------------------------------------------
-
-  /// Toutes les actions à mener, dans l'ordre métier.
-  ///
-  /// Les corrections sont PRODUITES dans l'ordre de la fiche de mesure (pH,
-  /// chlore, TAC, ...) puis TRIEES explicitement sur (priorité, ordre
-  /// d'ajout) : c'est le tri qui garantit l'ordre TAC -> pH -> chlore ->
-  /// stabilisant/TH/sel, jamais l'ordre d'ecriture du code.
   static List<DoseRecommendation> recommend({
     required PoolConfig config,
     required WaterReading reading,
   }) {
-    // Un volume nul ou une mesure vide ne peuvent produire aucune dose : sans
-    // volume la dose n'a pas de sens, sans mesure il n'y a rien à corriger.
+
     if (config.volumeM3 <= 0 || reading.isEmpty) {
       return const <DoseRecommendation>[];
     }
@@ -779,7 +634,6 @@ class ChemistryEngine {
     return DoseRecommendation.sorted(actions);
   }
 
-  /// Assemble les avertissements non vides en un seul texte, ou `null`.
   static String? _joinWarnings(List<String> parts) {
     final List<String> kept = parts
         .where((String part) => part.isNotEmpty)

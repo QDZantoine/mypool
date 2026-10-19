@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/connection_notifier.dart';
 import '../models/pool_config.dart';
 import '../state/providers.dart';
 import '../widgets/weather/weather_page.dart';
@@ -15,7 +16,6 @@ import 'settings_screen.dart';
 import 'splash_screen.dart';
 import 'theme.dart';
 
-/// Racine de l'application.
 class AquaControlApp extends StatelessWidget {
   const AquaControlApp({super.key});
 
@@ -31,12 +31,6 @@ class AquaControlApp extends StatelessWidget {
   }
 }
 
-/// Navigation principale.
-///
-/// UN SEUL niveau ici, cinq destinations. Le second niveau — saisie,
-/// historique, liste complète des actions — s'ouvre par-dessus. C'est la
-/// limite que le projet s'impose : « deux niveaux de navigation au maximum »,
-/// parce qu'on ne cherche pas dans une arborescence avec une main occupée.
 class ShellView extends ConsumerStatefulWidget {
   const ShellView({super.key});
 
@@ -50,9 +44,7 @@ class _ShellViewState extends ConsumerState<ShellView> {
   @override
   void initState() {
     super.initState();
-    // L'amorçage démarre après la première image : l'application est déjà
-    // affichée et utilisable avec les valeurs par défaut, et les valeurs
-    // enregistrées la remplacent quand elles arrivent.
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(bootstrap(ProviderScope.containerOf(context)));
     });
@@ -69,10 +61,13 @@ class _ShellViewState extends ConsumerState<ShellView> {
   @override
   Widget build(BuildContext context) {
     final PoolConfig config = ref.watch(poolConfigProvider);
-    // Les couleurs d'état sont calibrées par thème : sans cet alignement, un
-    // passage en mode sombre garderait les valeurs du mode clair et le
-    // contraste tomberait sous la norme.
+    final ConnectionQuality connectionQuality =
+        ref.watch(connectionNotifierProvider);
+
     AppTheme.applyBrightness(Theme.brightnessOf(context));
+
+    final bool isOffline = connectionQuality == ConnectionQuality.offline ||
+        connectionQuality == ConnectionQuality.degraded;
 
     return Scaffold(
       appBar: AppBar(
@@ -96,18 +91,45 @@ class _ShellViewState extends ConsumerState<ShellView> {
             ),
         ],
       ),
-      body: switch (_index) {
-        0 => const HomeScreen(),
-        1 => const CoverScreen(),
-        2 => const FiltrationScreen(),
-        3 => const WeatherPage(),
-        _ => const SettingsScreen(),
-      },
+      body: Column(
+        children: <Widget>[
+          if (isOffline)
+            Container(
+              width: double.infinity,
+              color: AppTheme.drift.withValues(alpha: 0.15),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.wifi_off_rounded, color: AppTheme.drift, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      connectionQuality.userNoticeMessage ??
+                          'Mode hors-ligne : utilisation du cache local et de la BDD SQLite.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.drift,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: switch (_index) {
+              0 => const HomeScreen(),
+              1 => const CoverScreen(),
+              2 => const FiltrationScreen(),
+              3 => const WeatherPage(),
+              _ => const SettingsScreen(),
+            },
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (int index) => setState(() => _index = index),
-        // Les libellés restent toujours visibles : une icône seule se devine
-        // mal au soleil, et personne n'a le temps d'apprendre des pictogrammes.
+
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const <NavigationDestination>[
           NavigationDestination(
@@ -140,4 +162,3 @@ class _ShellViewState extends ConsumerState<ShellView> {
     );
   }
 }
-

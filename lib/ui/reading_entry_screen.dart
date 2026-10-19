@@ -10,19 +10,6 @@ import 'theme.dart';
 import 'widgets/measure_scale.dart';
 import 'widgets/section_header.dart';
 
-/// Saisie des valeurs qu'aucune sonde ne mesure.
-///
-/// L'écran a changé de nature : ce n'est plus « saisir une mesure », c'est
-/// « compléter ce que la sonde ne sait pas lire ». Le pH et la température
-/// n'y figurent qu'en repli, quand aucune sonde ne parle — sinon les
-/// reproposer inviterait à écraser une mesure fraîche par un souvenir.
-///
-/// Deux principes du projet gouvernent le reste :
-///
-/// - **on saisit ce qu'on a mesuré** : aucun champ n'est obligatoire, et un
-///   champ vide reste vide, il ne devient jamais zéro ;
-/// - **aucune donnée à saisir deux fois** : les champs partent de la dernière
-///   valeur connue, qu'il suffit de corriger.
 class ReadingEntryScreen extends ConsumerStatefulWidget {
   const ReadingEntryScreen({super.key});
 
@@ -59,10 +46,6 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
     super.dispose();
   }
 
-  /// Remplit les champs avec la dernière valeur connue, une seule fois.
-  ///
-  /// Une seule fois : réappliquer à chaque reconstruction écraserait ce que
-  /// l'utilisateur est en train de taper.
   void _seed(WaterReading? previous) {
     if (_seeded || previous == null) {
       return;
@@ -80,8 +63,7 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
   void _onChanged(WaterParameter parameter) {
     final double? parsed = _read(parameter);
     if (_values[parameter] != parsed) {
-      // L'échelle de lecture suit la frappe : on voit tout de suite si la
-      // valeur qu'on saisit tombe dans la plage.
+
       setState(() => _values[parameter] = parsed);
     }
   }
@@ -89,10 +71,6 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
   static String _format(double value, WaterParameter parameter) =>
       value.toStringAsFixed(parameter.decimals).replaceAll('.', ',');
 
-  /// Lit un champ. Rend `null` s'il est vide ou illisible.
-  ///
-  /// La virgule est acceptée : c'est ce que propose le clavier français, et
-  /// refuser « 7,2 » serait absurde.
   double? _read(WaterParameter parameter) {
     final String raw = _controllers[parameter]!.text.trim();
     if (raw.isEmpty) {
@@ -103,8 +81,7 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
 
   Future<void> _save() async {
     final WaterReading reading = WaterReading(
-      // L'heure de saisie est lue ici, dans l'interface : le domaine ne
-      // touche jamais à l'horloge.
+
       takenAt: DateTime.now(),
       ph: _read(WaterParameter.ph),
       freeChlorine: _read(WaterParameter.freeChlorine),
@@ -151,9 +128,6 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
     final List<WaterParameter> manual = ref.watch(manualParametersProvider);
     _seed(ref.read(lastEnteredReadingProvider));
 
-    // Le pH et la température ne sont proposés que si aucune sonde ne les
-    // suit : les redemander alors qu'une mesure fraîche existe inviterait à
-    // l'écraser par un souvenir.
     final List<WaterParameter> fallback = telemetry.hasLiveValues
         ? const <WaterParameter>[]
         : sensorParameters;
@@ -161,8 +135,7 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Compléter les mesures')),
       body: ListView(
-        // Réserve la barre de gestes ET le clavier : un champ de saisie
-        // recouvert par le clavier est un champ qu'on ne peut pas corriger.
+
         padding: EdgeInsets.fromLTRB(
           AppTheme.gutter,
           10,
@@ -216,7 +189,6 @@ class _ReadingEntryScreenState extends ConsumerState<ReadingEntryScreen> {
   }
 }
 
-/// Un champ, son échelle de lecture, et l'état de ce qu'on vient de taper.
 class _Field extends StatelessWidget {
   const _Field({
     required this.parameter,
@@ -263,8 +235,7 @@ class _Field extends StatelessWidget {
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: <TextInputFormatter>[
-              // Chiffres, virgule et point : le clavier français propose la
-              // virgule, les claviers numériques anglais le point.
+
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
             ],
             style: theme.textTheme.titleLarge,
@@ -282,7 +253,6 @@ class _Field extends StatelessWidget {
   }
 }
 
-/// Ce que la sonde mesure déjà, pour qu'on ne le ressaisisse pas.
 class _SensorNote extends StatelessWidget {
   const _SensorNote({
     required this.ph,

@@ -13,10 +13,6 @@ import 'widgets/day_timeline.dart';
 import 'widgets/section_header.dart';
 import 'widgets/value_display.dart';
 
-/// Planning de filtration conseillé et commande des relais.
-///
-/// L'écran explique d'où vient la durée et permet de basculer la pompe
-/// et le chauffage pour contrôler les relais Wokwi.
 class FiltrationScreen extends ConsumerWidget {
   const FiltrationScreen({super.key});
 
@@ -191,9 +187,8 @@ class FiltrationScreen extends ConsumerWidget {
                         .setRelay(DeviceChannel.pump, on: value);
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur: $e')),
-                      );
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text('Erreur: $e')));
                     }
                   }
                 },
@@ -210,8 +205,8 @@ class FiltrationScreen extends ConsumerWidget {
                 subtitle: Text(
                   (pumpOn ?? false)
                       ? ((heaterOn ?? false)
-                          ? 'Relais activé — LED rouge allumée'
-                          : 'Relais désactivé — LED rouge éteinte')
+                            ? 'Relais activé — LED rouge allumée'
+                            : 'Relais désactivé — LED rouge éteinte')
                       : 'Sécurité : la filtration doit être en marche',
                 ),
                 value: heaterOn ?? false,
@@ -234,22 +229,10 @@ class FiltrationScreen extends ConsumerWidget {
             ],
           ),
         ),
-        if (config.driver == DriverKind.mqtt) ...<Widget>[
-          const SizedBox(height: 12),
-          _Banner(
-            icon: Icons.phonelink_off,
-            tone: AppTheme.drift,
-            title: 'Planning non mémorisé',
-            text:
-                'En liaison MQTT, le module n’enregistre pas le planning : '
-                'la filtration s’arrête si le téléphone est éteint.',
-          ),
-        ],
       ],
     );
   }
 
-  /// « 40 », « 7,5 » — virgule décimale, sans décimale inutile.
   static String _number(double value) {
     final String text = value == value.roundToDouble()
         ? value.toStringAsFixed(0)
@@ -292,11 +275,6 @@ class _Line extends StatelessWidget {
   }
 }
 
-/// Bandeau d'information, avec son titre et son explication.
-///
-/// Un titre en gras suivi d'une phrase : le titre suffit à savoir de quoi il
-/// s'agit, la phrase à savoir quoi en faire. Un pavé de texte sans titre
-/// oblige à tout lire pour décider si ça concerne.
 class _Banner extends StatelessWidget {
   const _Banner({
     required this.icon,

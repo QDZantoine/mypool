@@ -4,15 +4,6 @@ import '../../models/water_reading.dart';
 import '../theme.dart';
 import 'value_display.dart';
 
-/// Le panneau de tête : le verdict, puis les deux valeurs suivies en continu.
-///
-/// C'est la thèse de l'écran d'accueil. L'utilisateur arrive avec une seule
-/// question — « est-ce que l'eau est bonne ? » — et la réponse est la première
-/// chose écrite, en mots, avant tout chiffre. Les deux grands nombres qui
-/// suivent sont là pour la confirmer, pas pour être déchiffrés.
-///
-/// Le panneau est teinté par le verdict : au soleil, la couleur de fond porte
-/// plus loin que n'importe quel texte.
 class LivePanel extends StatelessWidget {
   const LivePanel({
     required this.verdict,
@@ -27,27 +18,19 @@ class LivePanel extends StatelessWidget {
     super.key,
   });
 
-  /// Trois ou quatre mots. « Eau équilibrée », « pH à corriger ».
   final String verdict;
 
-  /// Une phrase qui dit quoi faire, ou pourquoi il n'y a rien à faire.
   final String detail;
 
   final Color tone;
 
-  /// La sonde parle-t-elle en ce moment ?
   final bool isLive;
 
   final double? ph;
   final double? temperatureC;
 
-  /// État de la liaison, en micro-libellé.
   final String? linkLabel;
 
-  /// Action principale du panneau, quand il y en a une.
-  ///
-  /// Un écran vide est une invitation à agir : sans ce bouton, l'utilisateur
-  /// lit « Pas encore de mesure » et doit deviner où aller.
   final String? actionLabel;
   final VoidCallback? onAction;
 
@@ -73,9 +56,7 @@ class LivePanel extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              // Le point n'est qu'un témoin visuel : l'état de la liaison est
-              // déjà dit par le libellé à côté, et l'annoncer deux fois
-              // alourdirait la lecture.
+
               ExcludeSemantics(
                 child: _LinkDot(isLive: isLive, tone: tone),
               ),
@@ -91,8 +72,7 @@ class LivePanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          // Le verdict et son explication forment une seule phrase à
-          // l'oreille.
+
           MergeSemantics(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +126,6 @@ class LivePanel extends StatelessWidget {
   }
 }
 
-/// Un des deux grands nombres du panneau.
 class _BigValue extends StatelessWidget {
   const _BigValue({
     required this.label,
@@ -200,11 +179,6 @@ class _BigValue extends StatelessWidget {
   }
 }
 
-/// Témoin de liaison : un point qui respire quand la sonde parle.
-///
-/// La seule animation ambiante de l'application. Elle dit une chose utile —
-/// « ce chiffre est en train d'être mesuré » — et s'arrête net quand la
-/// liaison tombe, ce qui est aussi une information.
 class _LinkDot extends StatefulWidget {
   const _LinkDot({required this.isLive, required this.tone});
 
@@ -257,7 +231,6 @@ class _LinkDotState extends State<_LinkDot>
         ? widget.tone
         : Theme.of(context).colorScheme.outline;
 
-    // Respect du réglage système : personne ne doit subir une pulsation.
     if (!widget.isLive || MediaQuery.disableAnimationsOf(context)) {
       return _dot(color, 1.0);
     }

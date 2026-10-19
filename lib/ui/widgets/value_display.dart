@@ -2,18 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Une valeur mesurée et son unité.
-///
-/// Existe pour deux raisons vues sur appareil :
-///
-/// - **l'unité ne doit jamais avoir la taille du nombre.** Un « % » de 76 px
-///   à côté d'un « 22 » de 76 px pèse autant que la mesure et déséquilibre
-///   toute la carte. Elle est ici calée à 42 % de la hauteur du chiffre et
-///   posée sur sa ligne de base.
-/// - **une valeur absente n'est pas un tiret géant.** Un « — » rendu en
-///   grande taille devient un trait plein qu'on prend pour une barre de
-///   chargement. Le vide s'écrit donc en mots, dans la taille du texte
-///   courant.
 class ValueDisplay extends StatelessWidget {
   const ValueDisplay({
     required this.value,
@@ -25,23 +13,16 @@ class ValueDisplay extends StatelessWidget {
     super.key,
   });
 
-  /// Valeur déjà mise en forme, ou `null` si rien n'a été mesuré.
   final String? value;
 
   final String? unit;
   final ValueSize size;
   final Color? color;
 
-  /// Ce qui s'affiche à la place du nombre quand il n'y a rien.
   final String emptyLabel;
 
   final bool alignEnd;
 
-  /// Part de la hauteur du chiffre attribuée à l'unité.
-  ///
-  /// 42 % : l'unité reste lisible sans peser autant que la mesure. À taille
-  /// égale, un « % » de 76 px à côté d'un « 22 » de 76 px déséquilibre toute
-  /// la carte — c'est ce qui a été constaté sur appareil.
   static const double unitScale = 0.42;
 
   @override
@@ -54,8 +35,7 @@ class ValueDisplay extends StatelessWidget {
     };
 
     if (value == null) {
-      // En mots, à la taille du texte courant : c'est une phrase, pas une
-      // mesure.
+
       return Text(
         emptyLabel,
         textAlign: alignEnd ? TextAlign.right : TextAlign.left,
@@ -77,9 +57,7 @@ class ValueDisplay extends StatelessWidget {
           children: <InlineSpan>[
             if (unit != null && unit!.isNotEmpty)
               TextSpan(
-                // Espace fine INSÉCABLE (U+202F) avant l'unité : la
-                // typographie française l'exige devant « % », et l'insécable
-                // évite qu'une unité se retrouve seule sur une ligne.
+
                 text: '\u202F${unit!}',
                 style: numberStyle.copyWith(
                   color: color ?? theme.colorScheme.outline,
@@ -95,21 +73,13 @@ class ValueDisplay extends StatelessWidget {
   }
 }
 
-/// Les trois tailles de valeur du système.
 enum ValueSize { large, medium, small }
 
-/// Un état vide, écrit et non dessiné.
-///
-/// Remplace le tiret géant qui apparaissait quand une carte n'avait rien à
-/// montrer : à 76 px, un « — » devient un trait plein qu'on prend pour un
-/// élément d'interface en panne.
 class EmptyValue extends StatelessWidget {
   const EmptyValue({required this.label, this.hint, super.key});
 
-  /// Ce qui manque, en trois mots.
   final String label;
 
-  /// Comment l'obtenir.
   final String? hint;
 
   @override

@@ -5,15 +5,11 @@ import 'package:http/http.dart' as http;
 
 import '../models/ph_history_entry.dart';
 
-/// Service d'interrogation et de gestion des données transmises par Node-RED / InfluxDB.
 class NodeRedService {
   NodeRedService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
-  /// Récupère l'historique du pH depuis Node-RED et logue les résultats.
-  ///
-  /// Note pour Android Emulator : utiliser '10.0.2.2' au lieu de 'localhost'.
   Future<List<PhHistoryEntry>> fetchAndLogPhHistory({
     String? baseUrl,
   }) async {
@@ -71,7 +67,6 @@ class NodeRedService {
     return const <PhHistoryEntry>[];
   }
 
-  /// Récupère la dernière mesure pH écrite en BDD depuis Node-RED.
   Future<PhHistoryEntry?> fetchLatestPhHistoryEntry({
     String? baseUrl,
   }) async {
@@ -84,9 +79,6 @@ class NodeRedService {
     return sorted.last;
   }
 
-  /// Filtre et échantillonne les mesures pour conserver au maximum [maxCount] mesures
-  /// espacées d'au moins [minInterval] (par défaut 5 minutes), en partant de la plus récente.
-  /// Le résultat est retourné dans l'ordre chronologique.
   static List<PhHistoryEntry> filterLastEntriesSpacedBy(
     List<PhHistoryEntry> entries, {
     int maxCount = 10,
@@ -118,5 +110,4 @@ class NodeRedService {
   }
 }
 
-/// Alias de compatibilité pour PhHistoryService.
 typedef PhHistoryService = NodeRedService;

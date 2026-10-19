@@ -1,6 +1,5 @@
 import 'json_tolerant.dart';
 
-/// Données de localisation renvoyées par l'API météo.
 class WeatherLocation {
   const WeatherLocation({
     this.name = '',
@@ -100,7 +99,6 @@ class WeatherLocation {
   String toString() => 'WeatherLocation($name, $country, $lat, $lon)';
 }
 
-/// Description de la condition météo actuelle (texte, icône, code).
 class WeatherCondition {
   const WeatherCondition({
     this.text = '',
@@ -156,7 +154,6 @@ class WeatherCondition {
   String toString() => 'WeatherCondition($text, code: $code)';
 }
 
-/// Qualité de l'air (optionnelle, retournée lorsque aqi=yes).
 class AirQuality {
   const AirQuality({
     this.co,
@@ -261,7 +258,6 @@ class AirQuality {
       'AirQuality(pm2_5: $pm25, pm10: $pm10, EPA: $usEpaIndex)';
 }
 
-/// Mesures météo actuelles renvoyées par WeatherAPI.
 class CurrentWeather {
   const CurrentWeather({
     this.lastUpdatedEpoch = 0,
@@ -460,7 +456,6 @@ class CurrentWeather {
       'CurrentWeather($tempC°C, ${condition.text}, Humidité: $humidity%)';
 }
 
-/// Alerte météo renvoyée par l'API météo.
 class WeatherAlert {
   const WeatherAlert({
     this.headline = '',
@@ -570,7 +565,6 @@ class WeatherAlert {
       ]);
 }
 
-/// Ensemble complet des données météo renvoyé par l'API météo.
 class WeatherData {
   const WeatherData({
     this.location = const WeatherLocation(),

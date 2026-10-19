@@ -15,18 +15,6 @@ import 'widgets/live_panel.dart';
 import 'widgets/reading_row.dart';
 import 'widgets/section_header.dart';
 
-/// Accueil.
-///
-/// L'écran est organisé par ORIGINE DE LA MESURE, et non par ordre
-/// alphabétique ou par importance chimique. C'est ce qui répond à la question
-/// réelle de l'utilisateur : qu'est-ce qui se surveille tout seul, et
-/// qu'est-ce que je dois aller tester moi-même ?
-///
-/// L'ordre des blocs suit ce qu'on vient chercher :
-///   1. l'eau est-elle bonne (verdict, en mots) ;
-///   2. qu'est-ce que je verse (l'action la plus urgente, avec sa dose) ;
-///   3. ce qui est suivi en continu ;
-///   4. ce qui reste à tester à la main, avec l'âge de la dernière mesure.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -49,9 +37,7 @@ class HomeScreen extends ConsumerWidget {
       color: AppTheme.chlorine,
       onRefresh: () => ref.read(readingsProvider.notifier).load(),
       child: ListView(
-        // Le bas réserve la hauteur de la barre de gestes : sans cela, la
-        // dernière carte passe sous l'indicateur d'accueil et son contenu
-        // devient inatteignable.
+
         padding: EdgeInsets.fromLTRB(
           AppTheme.gutter,
           AppTheme.gutter,
@@ -67,9 +53,7 @@ class HomeScreen extends ConsumerWidget {
             linkLabel: verdict.linkLabel,
             ph: reading?.ph,
             temperatureC: reading?.temperature,
-            // L'action n'apparaît que quand il n'y a rien à montrer : une
-            // fois les mesures là, le panneau redevient un cadran et le
-            // bouton irait en concurrence avec l'action à mener.
+
             actionLabel: reading == null ? 'Saisir une mesure' : null,
             onAction: reading == null
                 ? () => ReadingEntryScreen.open(context)
@@ -84,9 +68,7 @@ class HomeScreen extends ConsumerWidget {
                   ? () => ActionsScreen.open(context)
                   : null,
             ),
-            // Une seule action détaillée : l'ordre est chimique, et verser le
-            // chlore avant d'avoir corrigé le pH consomme du produit pour
-            // rien.
+
             DoseCard(action: actions.first, rank: 1),
             if (actions.length > 1)
               Padding(
@@ -98,9 +80,6 @@ class HomeScreen extends ConsumerWidget {
               ),
           ],
 
-          // Les blocs de mesure ne s'affichent que s'il y a quelque chose à
-          // lire. Deux échelles vides n'apprennent rien et occupent l'écran
-          // que l'invitation à mesurer devrait remplir.
           if (reading != null) ...<Widget>[
             const SectionHeader(label: 'Suivi en continu'),
             _Panel(
@@ -166,7 +145,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  /// Âge de la mesure manuelle, quand la valeur existe.
   static Duration? _ageOf(
     WaterReading entered,
     WaterParameter parameter,
@@ -175,16 +153,13 @@ class HomeScreen extends ConsumerWidget {
     if (entered.valueOf(parameter) == null) {
       return null;
     }
-    // L'instant de référence vient de la sonde quand elle parle, sinon de
-    // l'horloge : c'est le seul endroit de l'application qui la lit, et c'est
-    // pour un affichage, pas pour un calcul.
+
     final DateTime now = telemetry.telemetry?.receivedAt ?? DateTime.now();
     final Duration age = now.difference(entered.takenAt);
     return age.isNegative ? Duration.zero : age;
   }
 }
 
-/// Ce que l'écran annonce en premier.
 class _Verdict {
   const _Verdict({
     required this.title,
@@ -198,10 +173,6 @@ class _Verdict {
   final Color tone;
   final String linkLabel;
 
-  /// Compose le verdict.
-  ///
-  /// Il dit d'abord ce qui compte : s'il y a quelque chose à verser, c'est ça
-  /// le verdict. « Eau équilibrée » n'a de sens que si rien n'est à corriger.
   static _Verdict from({
     required WaterReading? reading,
     required List<DoseRecommendation> actions,
@@ -245,7 +216,6 @@ class _Verdict {
   }
 }
 
-/// Groupe de lignes de mesure, séparées par des filets.
 class _Panel extends StatelessWidget {
   const _Panel({required this.children});
 

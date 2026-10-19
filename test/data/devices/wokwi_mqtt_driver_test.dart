@@ -10,7 +10,6 @@ import 'package:mypool/models/mqtt_settings.dart';
 
 import 'fake_mqtt_transport.dart';
 
-/// Trame conforme au § 3.1 de l'addendum.
 String telemetryJson({
   double ph = 7.24,
   double tempC = 26.4,
@@ -51,8 +50,7 @@ void main() {
       settings: settings,
       transport: transport,
       clock: () => now,
-      // Les délais de reconnexion sont enregistrés puis ignorés : aucun test
-      // n'attend réellement.
+
       delay: (Duration d) async => delays.add(d),
     );
   }
@@ -63,7 +61,6 @@ void main() {
     build();
   });
 
-  /// Livre une trame et laisse le flux se propager.
   Future<void> pushTelemetry(String payload) async {
     transport.deliver(settings.topicTelemetry, payload);
     await pumpEventQueue();
@@ -85,9 +82,7 @@ void main() {
 
       expect(transport.commands, isNotEmpty);
       for (final PublishedMessage message in transport.published) {
-        // Un « open » retenu par le broker serait relivré au module à sa
-        // prochaine connexion et relancerait un mouvement sans personne
-        // devant la piscine.
+
         expect(
           message.retain,
           isFalse,
@@ -137,9 +132,6 @@ void main() {
         autoOff: CoverSafety.holdTimeout,
       );
 
-      // Ce n'est pas un oubli : le délai de garde vit dans le firmware.
-      // Transmettre la temporisation ferait dépendre l'arrêt d'un ordre passé
-      // par le réseau, ce qui n'est pas une sécurité.
       final PublishedMessage sent = transport.commands.last;
       expect(sent.payload, 'open');
       expect(sent.payload, isNot(contains('1800')));
@@ -148,8 +140,7 @@ void main() {
 
     test('la garde de plafond s’applique quand même', () async {
       await driver.start();
-      // Une temporisation illégale reste refusée, même si elle n'est pas
-      // envoyée : c'est un défaut de programmation de l'appelant.
+
       expect(
         () => driver.pulse(
           DeviceChannel.coverOpen,
@@ -162,8 +153,7 @@ void main() {
 
     test('une impulsion sur la pompe ou le chauffage est refusée', () async {
       await driver.start();
-      // Le contrat § 3.2 n'expose pas d'impulsion temporisée pour ces deux
-      // relais : ils se commandent en marche/arrêt.
+
       for (final DeviceChannel channel in <DeviceChannel>[
         DeviceChannel.pump,
         DeviceChannel.heater,
@@ -180,7 +170,7 @@ void main() {
     test('une erreur de transport devient un message affichable', () async {
       await driver.start();
       transport.throwOnPublish = true;
-      // Une exception technique ne doit jamais atteindre l'interface.
+
       await expectLater(
         driver.setRelay(DeviceChannel.pump, on: true),
         throwsA(
@@ -224,7 +214,6 @@ void main() {
       expect(await driver.relayState(DeviceChannel.coverClose), isFalse);
       expect(await driver.relayState(DeviceChannel.heater), isFalse);
 
-      // Aucune requête n'a été envoyée pour lire l'état.
       expect(transport.published.length, publishedBefore);
     });
 
@@ -247,8 +236,6 @@ void main() {
       await pushTelemetry(telemetryJson());
       expect(driver.hasFreshTelemetry, isTrue);
 
-      // Le module publie toutes les 2 s : à 11 s, quatre trames ont été
-      // perdues, l'état affiché ne fait plus foi.
       now = now.add(const Duration(seconds: 11));
       expect(driver.hasFreshTelemetry, isFalse);
       await expectLater(
@@ -266,14 +253,14 @@ void main() {
     test('la puissance n’est pas mesurée par ce montage', () async {
       await driver.start();
       await pushTelemetry(telemetryJson());
-      // `null` le dit, plutôt qu'un zéro qui passerait pour une mesure.
+
       expect(await driver.relayPower(DeviceChannel.pump), isNull);
     });
 
     test('sans fin de course, la position reste une estimation', () async {
       await driver.start();
       await pushTelemetry(telemetryJson(estimated: true, position: 1.0));
-      // Le firmware publie `estimated: true` : il n'a pas de capteur.
+
       expect(await driver.inputState(DeviceInput.coverOpenedLimit), isNull);
       expect(await driver.inputState(DeviceInput.coverClosedLimit), isNull);
     });
@@ -299,7 +286,6 @@ void main() {
       await pumpEventQueue();
       expect(driver.isModuleOnline, isTrue);
 
-      // « 0 » publié par le broker au nom de l'ESP32 disparu.
       transport.deliver(settings.topicOnline, '0');
       await pumpEventQueue();
       expect(driver.isModuleOnline, isFalse);
@@ -329,7 +315,7 @@ void main() {
       await driver.start();
       transport.deliver('aquacontrol/autre/state/telemetry', telemetryJson());
       await pumpEventQueue();
-      // Les topics d'une autre installation ne doivent rien changer.
+
       expect(driver.lastTelemetry, isNull);
     });
   });
@@ -340,16 +326,14 @@ void main() {
       await pushTelemetry(telemetryJson(ph: 7.2));
       expect(driver.lastTelemetry?.ph, 7.2);
 
-      // Sur un broker public, n'importe qui peut publier n'importe quoi.
       await pushTelemetry('{ceci n’est pas du JSON');
       await pushTelemetry('');
-      // Un JSON valide qui n'est pas une trame : il se décoderait en trame
-      // vide et effacerait le dernier état connu.
+
       await pushTelemetry('42');
       await pushTelemetry('"bonjour"');
       await pushTelemetry('{}');
       await pushTelemetry('[]');
-      // La dernière trame valide reste en place.
+
       expect(driver.lastTelemetry?.ph, 7.2);
       expect(driver.hasFreshTelemetry, isTrue);
 
@@ -376,9 +360,6 @@ void main() {
       transport.restoreConnection();
       await pumpEventQueue();
 
-      // Un abonnement ne survit pas à une déconnexion : sans ce
-      // rétablissement, l'application resterait muette après un retour de
-      // réseau.
       expect(transport.subscriptions.length, 2);
       expect(transport.subscriptions.last, settings.topicStateWildcard);
     });
@@ -391,26 +372,23 @@ void main() {
       transport.dropConnection();
       await pumpEventQueue();
 
-      // L'état affiché doit dire « hors ligne » plutôt que rester figé sur la
-      // dernière valeur connue.
       expect(driver.isModuleOnline, isFalse);
     });
 
     test('les délais de reconnexion sont progressifs et plafonnés', () async {
       await driver.start();
-      // Le broker refuse les trois prochaines tentatives.
+
       transport.failuresBeforeSuccess = 3;
       transport.dropConnection();
       await pumpEventQueue();
 
-      // 1 s, 2 s, 5 s puis succès : on ne martèle pas un broker en panne.
       expect(delays.take(3).toList(), <Duration>[
         const Duration(seconds: 1),
         const Duration(seconds: 2),
         const Duration(seconds: 5),
       ]);
       expect(transport.isConnected, isTrue);
-      // Et l'abonnement est rétabli.
+
       expect(transport.subscriptions.length, greaterThanOrEqualTo(2));
     });
 
@@ -419,7 +397,7 @@ void main() {
         WokwiMqttDriver.reconnectBackoff.last,
         const Duration(seconds: 30),
       );
-      // Table croissante : un délai qui redescendrait annulerait l'intérêt.
+
       for (int i = 1; i < WokwiMqttDriver.reconnectBackoff.length; i++) {
         expect(
           WokwiMqttDriver.reconnectBackoff[i],
@@ -437,7 +415,7 @@ void main() {
 
       await driver.dispose();
       await pumpEventQueue();
-      // Plus aucune tentative après libération.
+
       expect(transport.connectAttempts, lessThanOrEqualTo(attempts + 1));
     });
   });
@@ -453,7 +431,6 @@ void main() {
         'aquacontrol/a7f3c1e9b2xx/cmd/ping',
       );
 
-      // Le module republie sa télémétrie 120 ms plus tard.
       now = now.add(const Duration(milliseconds: 120));
       await pushTelemetry(telemetryJson());
 
@@ -462,8 +439,7 @@ void main() {
 
     test('une trame antérieure à la demande ne compte pas', () async {
       await driver.start();
-      // Une trame reçue AVANT le ping ne prouve pas que la liaison fonctionne
-      // maintenant.
+
       await pushTelemetry(telemetryJson());
 
       final DateTime before = now;
@@ -471,7 +447,6 @@ void main() {
       final Future<Duration> pending = driver.ping();
       await pumpEventQueue();
 
-      // Une trame horodatée dans le passé est ignorée par l'attente.
       now = before;
       await pushTelemetry(telemetryJson());
       bool settled = false;
@@ -483,7 +458,6 @@ void main() {
       await pumpEventQueue();
       expect(settled, isFalse);
 
-      // Une trame postérieure la débloque.
       now = before.add(const Duration(seconds: 2));
       await pushTelemetry(telemetryJson());
       expect(await pending, const Duration(seconds: 1));
@@ -495,7 +469,7 @@ void main() {
         transport: transport,
         clock: () => now,
         delay: (Duration d) async {},
-        // Délai raccourci : le test n'attend pas six secondes.
+
         telemetryTimeout: const Duration(milliseconds: 30),
       );
       await driver.start();
@@ -513,7 +487,7 @@ void main() {
     });
 
     test('sans liaison, le ping échoue immédiatement', () async {
-      // Pas de start() : le transport n'est pas connecté.
+
       await expectLater(
         driver.ping(),
         throwsA(
@@ -530,8 +504,7 @@ void main() {
   group('planning de filtration', () {
     test('le module refuse de mémoriser un planning, et le dit', () async {
       await driver.start();
-      // Limite assumée du § 8.1 : lever une erreur explicite vaut mieux que
-      // faire croire que la piscine filtrera téléphone éteint.
+
       await expectLater(
         driver.pushFiltrationSchedule(FiltrationSchedule.empty),
         throwsA(
@@ -546,8 +519,7 @@ void main() {
 
     test('l’effacement du planning n’échoue pas', () async {
       await driver.start();
-      // Aucun planning n'a jamais été écrit : échouer ici empêcherait un
-      // changement de matériel de se terminer.
+
       await driver.clearFiltrationSchedule();
     });
   });
@@ -570,7 +542,7 @@ void main() {
           ),
         ),
       );
-      // Aucune connexion tentée sur des réglages inutilisables.
+
       expect(transport.connectAttempts, 0);
     });
 

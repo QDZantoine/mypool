@@ -3,18 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/water_reading.dart';
 import '../theme.dart';
 
-/// L'instrument de lecture de l'application.
-///
-/// C'est un nuancier de bandelette, transposé à l'écran : une échelle de
-/// couleurs graduée, la plage conseillée encadrée par deux montants, et un
-/// repère sur la valeur mesurée. Personne n'a besoin d'apprendre à le lire —
-/// c'est ainsi qu'on lit l'eau d'une piscine depuis quarante ans.
-///
-/// Il répond à « est-ce que c'est bon ? » AVANT que le chiffre ne soit lu, ce
-/// qui est exactement ce qu'on demande à un écran regardé à bout de bras.
-///
-/// Les couleurs viennent des vrais réactifs ([AppTheme.scaleFor]) : le pH vire
-/// au jaune côté acide et au magenta côté alcalin, comme le rouge de phénol.
 class MeasureScale extends StatelessWidget {
   const MeasureScale({
     required this.parameter,
@@ -26,20 +14,12 @@ class MeasureScale extends StatelessWidget {
 
   final WaterParameter parameter;
 
-  /// `null` quand rien n'a été mesuré : l'échelle est alors grisée et sans
-  /// repère, plutôt que montrée avec un curseur à zéro.
   final double? value;
 
   final double height;
 
-  /// Affiche les trois graduations sous l'échelle.
   final bool showBounds;
 
-  /// Étendue affichée.
-  ///
-  /// L'échelle acceptable, élargie de 15 % de chaque côté : une valeur juste
-  /// au-delà doit rester visible sur le bord, sinon le repère se colle à
-  /// l'extrémité et on ne voit plus de combien on dépasse.
   double get _min => parameter.acceptableMin - _acceptableSpan * 0.15;
   double get _max => parameter.acceptableMax + _acceptableSpan * 0.15;
   double get _acceptableSpan =>
@@ -52,10 +32,6 @@ class MeasureScale extends StatelessWidget {
     final ParameterStatus status = parameter.statusOf(value);
     final bool measured = value != null;
 
-    // Un lecteur d'écran ne voit rien d'un dégradé et d'un repère. Sans cette
-    // annonce, toute l'information portée par l'échelle serait perdue : c'est
-    // exactement le cas que la règle « ne pas transmettre par la couleur
-    // seule » vise.
     return Semantics(
       label: measured
           ? '${parameter.label} : ${_bare(value!)}'
@@ -66,8 +42,7 @@ class MeasureScale extends StatelessWidget {
           : '${parameter.label} non mesuré. Plage conseillée de '
                 '${_bare(parameter.idealMin)} à '
                 '${_bare(parameter.idealMax)}.',
-      // Les graduations chiffrées sont déjà dans l'annonce ci-dessus : les
-      // laisser lisibles séparément ferait tout entendre deux fois.
+
       excludeSemantics: true,
       child: _buildScale(context, status, measured),
     );
@@ -94,7 +69,7 @@ class MeasureScale extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: <Widget>[
-                  // L'échelle colorée.
+
                   Positioned(
                     left: 0,
                     right: 0,
@@ -116,8 +91,7 @@ class MeasureScale extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Les deux montants de la plage conseillée : ils encadrent la
-                  // zone où l'eau est bonne, comme la fenêtre d'un nuancier.
+
                   Positioned(
                     left: idealLeft,
                     top: 4,
@@ -128,14 +102,10 @@ class MeasureScale extends StatelessWidget {
                     top: 4,
                     child: _Bracket(height: height + 10),
                   ),
-                  // Le repère de la valeur mesurée. Il glisse jusqu'à sa
-                  // position : c'est la seule animation de l'écran, et elle
-                  // sert à faire remarquer qu'une nouvelle mesure est arrivée.
+
                   if (measured)
                     AnimatedPositioned(
-                      // Le glissement du repère est supprimé quand
-                      // l'utilisateur a demandé moins d'animations : il ne
-                      // porte qu'un agrément, la valeur reste lisible sans.
+
                       duration: MediaQuery.disableAnimationsOf(context)
                           ? Duration.zero
                           : AppTheme.motion,
@@ -185,12 +155,10 @@ class MeasureScale extends StatelessWidget {
     );
   }
 
-  /// Valeur sans unité, avec virgule décimale.
   String _bare(double v) =>
       v.toStringAsFixed(parameter.decimals).replaceAll('.', ',');
 }
 
-/// Montant de la plage conseillée : un trait vertical fin, plein hauteur.
 class _Bracket extends StatelessWidget {
   const _Bracket({required this.height});
 
@@ -211,7 +179,6 @@ class _Bracket extends StatelessWidget {
   }
 }
 
-/// Repère de la valeur : une aiguille, comme sur un cadran.
 class _Marker extends StatelessWidget {
   const _Marker({required this.color, required this.height});
 
@@ -227,7 +194,7 @@ class _Marker extends StatelessWidget {
       height: height,
       child: Column(
         children: <Widget>[
-          // La pointe en haut désigne la graduation sans la masquer.
+
           CustomPaint(
             size: const Size(width, 7),
             painter: _TrianglePainter(color),

@@ -3,22 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/dose_recommendation.dart';
 import '../theme.dart';
 
-/// Une action à mener, avec sa dose, son pourquoi et son avertissement.
-///
-/// Trois règles du projet se voient ici :
-///
-/// - la quantité est mise en forme par le métier ([DoseRecommendation]), avec
-///   virgule décimale et bascule g/kg, ml/L ;
-/// - l'explication dit toujours POURQUOI, jamais « maintenez un pH correct » ;
-/// - toute dose porte son avertissement quand il y en a un, et il n'est
-///   jamais repliable.
 class DoseCard extends StatelessWidget {
   const DoseCard({required this.action, this.rank, super.key});
 
   final DoseRecommendation action;
 
-  /// Rang d'affichage, de 1 à n. L'ordre est métier, pas cosmétique :
-  /// TAC, puis pH, puis chlore, puis l'équilibre.
   final int? rank;
 
   @override
@@ -61,8 +50,7 @@ class DoseCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            // La quantité, en très gros : c'est ce qu'on vient chercher, le
-            // bidon déjà en main.
+
             if (action.quantity > 0) ...[
               Text(
                 action.formattedQuantity,
@@ -90,8 +78,7 @@ class DoseCard extends StatelessWidget {
             Text(action.explanation, style: theme.textTheme.bodyLarge),
             if (action.warning != null) ...[
               const SizedBox(height: 12),
-              // L'avertissement n'est jamais repliable ni tronqué : c'est une
-              // exigence du projet, pas une décoration.
+
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -123,7 +110,6 @@ class DoseCard extends StatelessWidget {
     );
   }
 
-  /// « 90 % », « 9,6 % » — virgule décimale, sans décimale inutile.
   static String _percent(double value) {
     final String text = value == value.roundToDouble()
         ? value.toStringAsFixed(0)

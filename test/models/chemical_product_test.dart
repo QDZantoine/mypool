@@ -15,17 +15,17 @@ void main() {
     });
 
     test('les concentrations du commerce', () {
-      // Galets de trichloroisocyanurique : 90 % de chlore actif.
+
       expect(
         ChemicalInventory.defaultFor(ChemicalRole.chlorineSlow).activePercent,
         90.0,
       );
-      // Hypochlorite de calcium (choc) : 56 %.
+
       expect(
         ChemicalInventory.defaultFor(ChemicalRole.chlorineShock).activePercent,
         56.0,
       );
-      // Hypochlorite de sodium (liquide) : 9,6 %.
+
       expect(
         ChemicalInventory.defaultFor(ChemicalRole.chlorineLiquid).activePercent,
         9.6,
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('les correcteurs mineraux purs sont la référence à 100 %', () {
-      // Ce sont eux qui donnent les coefficients de l’annexe À.
+
       for (final ChemicalRole role in <ChemicalRole>[
         ChemicalRole.phMinus,
         ChemicalRole.phPlus,
@@ -67,12 +67,12 @@ void main() {
 
   group('fraction active', () {
     test('conversion directe du pourcentage', () {
-      // 90 % -> 0,90
+
       expect(
         ChemicalInventory.defaultFor(ChemicalRole.chlorineSlow).activeFraction,
         closeTo(0.90, 1e-9),
       );
-      // 9,6 % -> 0,096
+
       expect(
         ChemicalInventory.defaultFor(ChemicalRole.chlorineLiquid)
             .activeFraction,
@@ -84,7 +84,7 @@ void main() {
       final ChemicalProduct base = ChemicalInventory.defaultFor(
         ChemicalRole.chlorineSlow,
       );
-      // Une concentration nulle ferait diverger la dose vers l’infini.
+
       expect(base.copyWith(activePercent: 0.0).activeFraction, 0.01);
       expect(base.copyWith(activePercent: -50.0).activeFraction, 0.01);
       expect(base.copyWith(activePercent: 250.0).activeFraction, 1.0);
@@ -100,7 +100,7 @@ void main() {
           .withProduct(mine);
 
       expect(inventory.forRole(ChemicalRole.chlorineSlow), mine);
-      // Les autres rôles ne changent pas.
+
       expect(
         inventory.forRole(ChemicalRole.phMinus),
         ChemicalInventory.defaultFor(ChemicalRole.phMinus),
@@ -123,7 +123,7 @@ void main() {
         ChemicalInventory.standard.copyWith().hashCode,
         ChemicalInventory.standard.hashCode,
       );
-      // Un inventaire de taille differente n’est pas egal.
+
       expect(
         ChemicalInventory.standard.copyWith(
           products: const <ChemicalRole, ChemicalProduct>{},
@@ -148,7 +148,7 @@ void main() {
       expect(renamed.activeSubstance, 'autre');
       expect(renamed.activePercent, base.activePercent);
       expect(base.copyWith(), base);
-      // Un produit different n’est pas egal, et le type non plus.
+
       expect(renamed, isNot(base));
       expect(base == Object(), isFalse);
     });
@@ -202,7 +202,7 @@ void main() {
       final ChemicalProduct restored = ChemicalProduct.fromJson(
         <String, dynamic>{},
       );
-      // Le rôle par défaut est le chlore d’entretien.
+
       expect(restored, ChemicalInventory.defaultFor(ChemicalRole.chlorineSlow));
     });
 
@@ -220,9 +220,9 @@ void main() {
         <String, dynamic>{'role': 'poudre_de_perlimpinpin', 'label': 'Mystere'},
       );
       expect(restored.role, ChemicalRole.chlorineSlow);
-      // Le libellé lisible est conserve, lui.
+
       expect(restored.label, 'Mystere');
-      // La concentration retombe sur celle du défaut du rôle.
+
       expect(restored.activePercent, 90.0);
     });
 
@@ -261,7 +261,7 @@ void main() {
     });
 
     test('un inventaire vide ou corrompu est complète par les défauts', () {
-      // Un inventaire partiel doit rester exploitable par le moteur de dosage.
+
       final ChemicalInventory restored = ChemicalInventory.fromJson(
         <String, dynamic>{
           'products': <Object?>[

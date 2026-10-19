@@ -75,7 +75,7 @@ void main() {
         'Marseille',
       );
 
-      expect(requestedUri.scheme, 'http');
+      expect(requestedUri.scheme, 'https');
       expect(requestedUri.host, 'api.weatherapi.com');
       expect(requestedUri.path, '/v1/current.json');
       expect(requestedUri.queryParameters['key'], WeatherService.defaultApiKey);

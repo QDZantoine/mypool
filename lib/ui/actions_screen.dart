@@ -5,7 +5,6 @@ import '../models/dose_recommendation.dart';
 import '../state/derived_providers.dart';
 import 'widgets/dose_card.dart';
 
-/// Toutes les actions à mener, dans l'ordre métier.
 class ActionsScreen extends ConsumerWidget {
   const ActionsScreen({super.key});
 

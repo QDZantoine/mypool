@@ -15,7 +15,7 @@ void main() {
         settings.topicFilterAlert,
         'aquacontrol/a7f3c1e9b2/state/alert/filter',
       );
-      // Un seul filtre couvre télémétrie, présence et alerte.
+
       expect(settings.topicStateWildcard, 'aquacontrol/a7f3c1e9b2/state/#');
       expect(
         settings.commandTopic('cover'),
@@ -26,12 +26,10 @@ void main() {
 
   group('validité des réglages', () {
     test('un identifiant trop court est inutilisable', () {
-      // Sur un broker public, un identifiant court rend la collision avec un
-      // autre utilisateur plausible : ce serait voir bouger la bâche d’un
-      // inconnu.
+
       expect(const MqttSettings(deviceId: 'abc').isUsable, isFalse);
       expect(const MqttSettings(deviceId: '').isUsable, isFalse);
-      // 8 caractères est le minimum retenu.
+
       expect(const MqttSettings(deviceId: 'a7f3c1e9').isUsable, isTrue);
       expect(MqttSettings.minimumDeviceIdLength, 8);
     });
@@ -48,8 +46,7 @@ void main() {
     });
 
     test('les brokers publics sont reconnus comme tels', () {
-      // Sert à afficher l’avertissement du § 6 : jamais un vrai volet sur un
-      // broker public.
+
       expect(const MqttSettings().isPublicBroker, isTrue);
       expect(
         const MqttSettings(host: 'test.mosquitto.org').isPublicBroker,
@@ -62,7 +59,7 @@ void main() {
       const MqttSettings settings = MqttSettings();
       expect(settings.host, 'broker.hivemq.com');
       expect(settings.port, 1883);
-      // Aucun identifiant par défaut : il doit être tiré au hasard.
+
       expect(settings.deviceId, '');
       expect(settings.isUsable, isFalse);
     });
@@ -126,8 +123,7 @@ void main() {
     });
 
     test('un identifiant vide reste vide plutôt que de prendre un défaut', () {
-      // Un identifiant par défaut serait devinable, et donc partagé avec tous
-      // les autres utilisateurs du broker public.
+
       expect(
         MqttSettings.fromJson(<String, dynamic>{'deviceId': '  '}).deviceId,
         '',

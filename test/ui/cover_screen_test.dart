@@ -17,19 +17,12 @@ void main() {
   late SimulationDriver driver;
   late ProviderContainer container;
 
-  // Une vue de téléphone plutôt que le 800 x 600 par défaut des tests : la
-  // disposition de l'écran est faite pour un portrait étroit, et la tester
-  // sur un paysage large ne prouverait rien.
-  /// Règle la vue sur un portrait de téléphone plutôt que le 800 x 600 par
-  /// défaut des tests : la disposition est faite pour un écran étroit, et la
-  /// vérifier sur un paysage large ne prouverait rien.
   void usePhoneViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
   }
 
-  /// Écran câblé sur un pilote de simulation observable.
   Widget build({required PoolConfig config}) {
     driver = SimulationDriver();
     container = ProviderContainer(
@@ -44,8 +37,7 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    // La configuration est chargée d'avance : l'écran doit refléter l'état
-    // enregistré, pas les défauts.
+
     container.read(poolConfigProvider.notifier).replace(config);
 
     return UncontrolledProviderScope(
@@ -92,7 +84,6 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-      // Le compteur du pilote est le juge : pas une seule impulsion.
       expect(driver.pulseCount, 0);
     });
 
@@ -106,7 +97,6 @@ void main() {
       await tester.tap(find.text('Lire l’avertissement'));
       await tester.pumpAndSettle();
 
-      // Le texte dit quoi faire, pas seulement que c'est dangereux.
       expect(find.byType(SafetyConsentSheet), findsOneWidget);
       expect(find.textContaining('VOYEZ le bassin'), findsOneWidget);
       expect(find.textContaining('doigt reste'), findsOneWidget);
@@ -158,8 +148,6 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-      // Aucune impulsion supplémentaire n'a été envoyée au relâchement :
-      // l'arrêt vient du délai de garde matériel.
       expect(driver.pulseCount, 1);
     });
 
@@ -192,7 +180,6 @@ void main() {
       await tester.pump();
       final int pulses = driver.pulseCount;
 
-      // L'écran disparaît : changement d'onglet, retour, fermeture.
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -201,7 +188,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Aucune commande de plus, et la répétition est coupée.
       expect(driver.pulseCount, pulses);
     });
   });
@@ -226,7 +212,6 @@ void main() {
       await tester.pumpWidget(build(config: consented()));
       await tester.pumpAndSettle();
 
-      // Le bloc de recalage est en bas de la liste : on l'amène à l'écran.
       await tester.scrollUntilVisible(
         find.text('Il est ouvert'),
         300,
@@ -238,7 +223,7 @@ void main() {
 
       expect(find.text('VOLET OUVERT'), findsOneWidget);
       expect(find.textContaining('100'), findsWidgets);
-      // C'est un humain qui a affirmé, pas un capteur.
+
       expect(find.textContaining('Position estimée'), findsOneWidget);
     });
   });
@@ -280,7 +265,6 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-      // Une phrase en français, sans trace technique.
       expect(find.textContaining('Le module ne répond pas'), findsOneWidget);
       expect(find.textContaining('Exception'), findsNothing);
     });
@@ -328,7 +312,6 @@ void main() {
       await tester.pumpWidget(build(config: consented()));
       await tester.pumpAndSettle();
 
-      // Perte de connexion (mode avion)
       container
           .read(connectionNotifierProvider.notifier)
           .updateMqttStatus(isOnline: false, isMqttReady: false);
@@ -339,13 +322,11 @@ void main() {
         findsOneWidget,
       );
 
-      // Retour de la connexion (mode avion désactivé)
       container
           .read(connectionNotifierProvider.notifier)
           .updateMqttStatus(isOnline: true, isMqttReady: true);
       await tester.pumpAndSettle();
 
-      // Le message doit disparaître automatiquement et les boutons réapparaître
       expect(
         find.textContaining('Problème de connexion'),
         findsNothing,

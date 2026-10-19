@@ -7,8 +7,7 @@ import 'package:mypool/models/pool_config.dart';
 void main() {
   group('pilote non disponible', () {
     test('chaque type de liaison a un libellé affichable', () async {
-      // Le message doit nommer la liaison choisie, sinon l'utilisateur ne sait
-      // pas quoi changer dans les réglages.
+
       const Map<DriverKind, String> expected = <DriverKind, String>{
         DriverKind.localModule: 'module local',
         DriverKind.homeAssistant: 'Home Assistant',
@@ -69,8 +68,7 @@ void main() {
     });
 
     test('la garde de sécurité passe avant l’indisponibilité', () async {
-      // Une temporisation illégale reste un défaut de programmation, même sur
-      // un pilote qui ne pilote rien.
+
       const UnavailableDriver driver = UnavailableDriver(
         DriverKind.localModule,
       );
@@ -90,7 +88,7 @@ void main() {
     });
 
     test('l’effacement du planning et la libération n’échouent pas', () async {
-      // Échouer ici empêcherait un changement de matériel de se terminer.
+
       const UnavailableDriver driver = UnavailableDriver(DriverKind.mqtt);
       await driver.clearFiltrationSchedule();
       await driver.dispose();

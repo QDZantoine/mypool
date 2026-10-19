@@ -14,13 +14,9 @@ WaterReading _reading({
   return WaterReading(takenAt: _start.add(offset), ph: ph, source: source);
 }
 
-/// Dépôt qui échoue à la demande, pour vérifier qu'une panne de base ne bloque
-/// pas l'application.
 class _FailingRepository extends InMemoryReadingsRepository {
   bool failing = false;
 
-  /// Fait lever une DeviceException plutôt qu'une exception générique : c'est
-  /// elle qui porte un détail technique séparé du message affichable.
   bool asDeviceException = false;
 
   void _check() {
@@ -116,7 +112,6 @@ void main() {
       }
       await small.load();
 
-      // Charger toute la table ferait grossir la mémoire sans rien apporter.
       expect(small.state.recent.length, 2);
     });
   });
@@ -132,7 +127,7 @@ void main() {
     });
 
     test('une mesure vide n’est pas enregistrée', () async {
-      // Une ligne sans aucune valeur polluerait la courbe.
+
       final StoredReading? stored = await controller.record(
         WaterReading(takenAt: _start),
       );
@@ -156,8 +151,7 @@ void main() {
 
   group('origine des mesures', () {
     test('latestSensor ignore les saisies manuelles', () async {
-      // La règle d'échantillonnage a besoin de la dernière mesure de SONDE :
-      // une saisie manuelle ne doit pas empêcher un point automatique.
+
       await repository.insert(
         _reading(ph: 7.2, source: MeasurementSource.sensor),
       );
@@ -204,7 +198,6 @@ void main() {
         _start.add(const Duration(days: 2)),
       );
 
-      // Les jours 0 et 1 partent, la borne du jour 2 reste.
       expect(removed, 2);
       expect(controller.state.recent.length, 3);
     });
@@ -238,12 +231,10 @@ void main() {
       failing.failing = true;
       await controller.load();
 
-      // Un historique illisible ne doit pas empêcher de saisir une mesure ni
-      // de calculer une dose.
       expect(controller.state.errorMessage, contains('historique'));
       expect(controller.state.errorMessage, isNot(contains('Exception')));
       expect(controller.state.isLoading, isFalse);
-      // Le détail technique est gardé pour le diagnostic, pas affiché.
+
       expect(controller.technicalLog, isNotEmpty);
       expect(controller.technicalLog.first, contains('verrouillée'));
     });
@@ -279,8 +270,7 @@ void main() {
     });
 
     test('une erreur matérielle garde son détail technique à part', () async {
-      // Le message affichable et la trace de diagnostic ne se mélangent
-      // jamais : l'utilisateur au bord du bassin n'a pas à lire un timeout.
+
       failing.failing = true;
       failing.asDeviceException = true;
 

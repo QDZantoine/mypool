@@ -9,7 +9,6 @@ import 'package:mypool/ui/widgets/measure_scale.dart';
 import 'package:mypool/ui/widgets/reading_row.dart';
 import 'package:mypool/ui/widgets/section_header.dart';
 
-/// Luminance relative WCAG d'une couleur.
 double _luminance(Color color) {
   double channel(double value) {
     return value <= 0.03928
@@ -22,7 +21,6 @@ double _luminance(Color color) {
       0.0722 * channel(color.b);
 }
 
-/// Rapport de contraste entre deux couleurs.
 double _contrast(Color a, Color b) {
   final double la = _luminance(a);
   final double lb = _luminance(b);
@@ -33,10 +31,7 @@ double _contrast(Color a, Color b) {
 
 void main() {
   group('contraste WCAG AA', () {
-    /// Le fond le plus difficile de chaque thème.
-    ///
-    /// En mode clair c'est le fond bleuté, plus sombre que les cartes ; en
-    /// mode sombre c'est la carte, plus claire que le fond.
+
     test('les couleurs d’état tiennent le 4,5:1 en mode clair', () {
       AppTheme.applyBrightness(Brightness.light);
       const Color hardest = AppTheme.surface;
@@ -56,7 +51,7 @@ void main() {
           greaterThanOrEqualTo(4.5),
           reason: '$name sur le fond clair',
         );
-        // Et sur les cartes, plus claires encore.
+
         expect(
           _contrast(color, AppTheme.card),
           greaterThanOrEqualTo(4.5),
@@ -86,14 +81,12 @@ void main() {
         );
       });
 
-      // On remet le thème clair : le champ est statique.
       AppTheme.applyBrightness(Brightness.light);
     });
 
     test('le texte courant est très au-dessus du minimum', () {
       AppTheme.applyBrightness(Brightness.light);
-      // L'encre principale porte tout ce qu'on lit au soleil : elle doit
-      // dépasser largement le seuil, pas le frôler.
+
       expect(
         _contrast(AppTheme.ink, AppTheme.surface),
         greaterThanOrEqualTo(7.0),
@@ -113,8 +106,7 @@ void main() {
     });
 
     test('chaque thème redéfinit ses couleurs d’état', () {
-      // Inverser les couleurs plutôt que les recalibrer ferait tomber le
-      // contraste : les deux jeux doivent différer.
+
       AppTheme.applyBrightness(Brightness.light);
       final Color lightAccent = AppTheme.chlorine;
       AppTheme.applyBrightness(Brightness.dark);
@@ -132,8 +124,7 @@ void main() {
     testWidgets('l’échelle de mesure énonce valeur, état et plage', (
       WidgetTester tester,
     ) async {
-      // Un dégradé et un repère ne se voient pas au lecteur d'écran : sans
-      // cette annonce, toute l'information de l'échelle serait perdue.
+
       await tester.pumpWidget(
         wrap(const MeasureScale(parameter: WaterParameter.ph, value: 7.9)),
       );
@@ -169,8 +160,7 @@ void main() {
     testWidgets('la ligne de mesure forme une seule annonce', (
       WidgetTester tester,
     ) async {
-      // Sans regroupement, le lecteur énonce « TAC », « trop bas », « 60 »,
-      // « mg/L » et l'échelle séparément, à l'utilisateur de recomposer.
+
       await tester.pumpWidget(
         wrap(const ReadingRow(parameter: WaterParameter.tac, value: 60)),
       );
@@ -212,14 +202,13 @@ void main() {
         ),
       );
 
-      // Un bouton de 36 px se rate une fois sur trois avec une main mouillée.
       final Size size = tester.getSize(find.byType(TextButton));
       expect(size.height, greaterThanOrEqualTo(44));
       expect(size.width, greaterThanOrEqualTo(44));
     });
 
     test('le jeton de cible tactile dépasse le minimum des plateformes', () {
-      // 44 pt côté Apple, 48 dp côté Material : on prend la marge.
+
       expect(AppTheme.touchTarget, greaterThanOrEqualTo(48));
     });
   });

@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 
 import '../models/weather_data.dart';
 
-/// Exception levée lors d'un échec de récupération des données météo.
 class WeatherException implements Exception {
   const WeatherException(this.message, {this.statusCode});
 
@@ -16,10 +15,6 @@ class WeatherException implements Exception {
   String toString() => 'WeatherException: $message';
 }
 
-/// Service d'interaction avec l'API Météo (WeatherAPI).
-///
-/// Récupère les conditions météo actuelles et la qualité de l'air pour une ville
-/// ou des coordonnées géographiques transmises dans le paramètre `q`.
 class WeatherService {
   WeatherService({
     http.Client? client,
@@ -32,7 +27,6 @@ class WeatherService {
        baseUrl = baseUrl ?? defaultCurrentBaseUrl,
        alertBaseUrl = alertBaseUrl ?? defaultAlertBaseUrl;
 
-  /// Clé API fournie par défaut pour le projet (lue depuis .env).
   static String get defaultApiKey {
     if (dotenv.isInitialized) {
       return dotenv.env['WEATHER_API_KEY'] ?? '8e87c09a99674e37abb90137260809';
@@ -40,22 +34,20 @@ class WeatherService {
     return '8e87c09a99674e37abb90137260809';
   }
 
-  /// URL de base de l'endpoint des conditions courantes.
   static String get defaultCurrentBaseUrl {
     final base = dotenv.isInitialized
-        ? (dotenv.env['API_BASE_URL'] ?? 'http://api.weatherapi.com/v1/')
-        : 'http://api.weatherapi.com/v1/';
+        ? (dotenv.env['API_BASE_URL'] ?? 'https://api.weatherapi.com/v1/')
+        : 'https://api.weatherapi.com/v1/';
     final cleanBase = base.endsWith('/')
         ? base.substring(0, base.length - 1)
         : base;
     return '$cleanBase/current.json';
   }
 
-  /// URL de base de l'endpoint des alertes météo.
   static String get defaultAlertBaseUrl {
     final base = dotenv.isInitialized
-        ? (dotenv.env['API_BASE_URL'] ?? 'http://api.weatherapi.com/v1/')
-        : 'http://api.weatherapi.com/v1/';
+        ? (dotenv.env['API_BASE_URL'] ?? 'https://api.weatherapi.com/v1/')
+        : 'https://api.weatherapi.com/v1/';
     final cleanBase = base.endsWith('/')
         ? base.substring(0, base.length - 1)
         : base;
@@ -68,8 +60,6 @@ class WeatherService {
   final String baseUrl;
   final String alertBaseUrl;
 
-  /// Récupère les données météo courantes pour un lieu donné (nom de ville,
-  /// coordonnées `"lat,lon"`, ou géolocalisation).
   Future<WeatherData> fetchCurrentWeather(
     String location, {
     bool aqi = true,

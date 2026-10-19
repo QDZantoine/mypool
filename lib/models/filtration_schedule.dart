@@ -1,37 +1,26 @@
 import 'json_tolerant.dart';
 
-/// Mode de pilotage de la filtration.
 enum FiltrationMode {
-  /// Durée calculée depuis la température de l'eau, decoupee en créneaux.
+
   automatic,
 
-  /// Créneaux saisis à la main par l'utilisateur.
   manual,
 
-  /// Filtration permanente (canicule, après un traitement choc).
   continuous,
 
-  /// Filtration arrêtée (hivernage).
   off,
 }
 
-/// Un créneau de filtration : une heure de depart et une durée.
-///
-/// Stocke en minutes depuis minuit plutôt qu'en `DateTime` : un planning est
-/// une règle qui se répète chaque jour, il ne porte pas de date. C'est aussi
-/// la forme attendue par le module, qui exécute le planning sans le téléphone.
 class FiltrationCycle {
   const FiltrationCycle({
     required this.startMinuteOfDay,
     required this.durationMinutes,
   });
 
-  /// Minutes depuis minuit, de 0 à 1 439.
   final int startMinuteOfDay;
 
   final int durationMinutes;
 
-  /// Minute de fin, ramenée dans la journée : un créneau peut passer minuit.
   int get endMinuteOfDay =>
       (startMinuteOfDay + durationMinutes) % _minutesPerDay;
 
@@ -39,13 +28,10 @@ class FiltrationCycle {
 
   Duration get duration => Duration(minutes: durationMinutes);
 
-  /// « 10:45 »
   String get formattedStart => formatMinuteOfDay(startMinuteOfDay);
 
-  /// « 17:15 »
   String get formattedEnd => formatMinuteOfDay(endMinuteOfDay);
 
-  /// « 6 h 30 », « 45 min »
   String get formattedDuration => formatDuration(durationMinutes);
 
   static String formatMinuteOfDay(int minuteOfDay) {
@@ -85,10 +71,9 @@ class FiltrationCycle {
   factory FiltrationCycle.fromJson(Object? raw) {
     final Map<String, dynamic> json = asJsonMap(raw);
     return FiltrationCycle(
-      // Une heure de depart hors journée est ramenée dans la journée plutôt
-      // que rejetée : le créneau reste exécutable.
+
       startMinuteOfDay: readInt(json, 'startMinuteOfDay', 0) % _minutesPerDay,
-      // Une durée négative ou superieure à la journée est bornée.
+
       durationMinutes: readInt(
         json,
         'durationMinutes',
@@ -111,7 +96,6 @@ class FiltrationCycle {
   String toString() => 'FiltrationCycle($formattedStart -> $formattedEnd)';
 }
 
-/// Le planning de filtration d'une journée.
 class FiltrationSchedule {
   const FiltrationSchedule({
     required this.mode,
@@ -121,7 +105,6 @@ class FiltrationSchedule {
     this.turnoverMinutes = 0,
   });
 
-  /// Planning vide : filtration arrêtée, aucun créneau.
   static const FiltrationSchedule empty = FiltrationSchedule(
     mode: FiltrationMode.off,
     cycles: <FiltrationCycle>[],
@@ -131,17 +114,12 @@ class FiltrationSchedule {
 
   final List<FiltrationCycle> cycles;
 
-  /// Température qui a servi au calcul, quand le mode est automatique.
   final double? waterTemperatureC;
 
-  /// Durée totale recommandee, en minutes. La somme des créneaux doit lui être
-  /// egale : c'est l'invariant du découpage.
   final int recommendedMinutes;
 
-  /// Durée d'une rotation complète du volume d'eau, en minutes.
   final int turnoverMinutes;
 
-  /// Somme réelle des créneaux, en minutes.
   int get totalMinutes => cycles.fold<int>(
     0,
     (int sum, FiltrationCycle cycle) => sum + cycle.durationMinutes,
@@ -153,9 +131,6 @@ class FiltrationSchedule {
 
   Duration get turnover => Duration(minutes: turnoverMinutes);
 
-  /// Nombre de rotations du volume assurees par le planning.
-  ///
-  /// En dessous de 1 le bassin n'a pas vu passer toute son eau dans le filtre.
   double get turnoverCount =>
       turnoverMinutes <= 0 ? 0.0 : totalMinutes / turnoverMinutes;
 

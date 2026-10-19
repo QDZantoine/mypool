@@ -8,12 +8,6 @@ import 'package:mypool/ui/app.dart';
 import 'package:mypool/ui/home_screen.dart';
 import 'package:mypool/ui/splash_screen.dart';
 
-/// Démarrage de l'application, de bout en bout.
-///
-/// Le test qui compte le plus dans ce fichier est le premier : l'application
-/// doit s'ouvrir et être utilisable AVANT que quoi que ce soit ait été lu sur
-/// le disque. C'est la règle du projet, et elle se vérifie ici en n'attendant
-/// délibérément aucun chargement.
 void main() {
   Widget app({
     InMemorySettingsStore? settings,
@@ -47,7 +41,6 @@ void main() {
     expect(find.byType(SplashScreen), findsOneWidget);
     expect(find.text('AQUACONTROL'), findsOneWidget);
 
-    // Tap pour passer immédiatement
     await tester.tap(find.byType(SplashScreen));
     await tester.pumpAndSettle();
 
@@ -58,13 +51,13 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(app());
-    // Une seule image, aucun chargement attendu.
+
     await tester.pump();
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    // Le nom du bassin par défaut est affiché dans la barre.
+
     expect(find.text('Ma piscine'), findsOneWidget);
-    // Sans mesure, le verdict le dit et explique quoi faire.
+
     expect(find.text('Pas encore de mesure'), findsOneWidget);
     expect(find.textContaining('Testez l’eau'), findsOneWidget);
   });
@@ -86,7 +79,6 @@ void main() {
       await tester.pump();
     }
 
-    // Retour sur l'accueil sans erreur.
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -97,17 +89,12 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    // Niveau 1 : les destinations. Niveau 2 : la saisie, ouverte par-dessus
-    // depuis l'action du panneau d'accueil.
     await tester.tap(find.text('Saisir une mesure'));
     await tester.pumpAndSettle();
     expect(find.text('Compléter les mesures'), findsOneWidget);
 
-    // Un seul retour ramène à l'accueil.
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
   });
 }
-
-

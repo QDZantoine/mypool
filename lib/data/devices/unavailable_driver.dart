@@ -2,17 +2,6 @@ import '../../models/filtration_schedule.dart';
 import '../../models/pool_config.dart';
 import 'pool_device_driver.dart';
 
-/// Pilote pour un type de liaison qui n'est pas encore écrit.
-///
-/// Il existe pour que l'application démarre quand même : une configuration
-/// qui désigne un matériel non implémenté ne doit pas donner un écran noir au
-/// lancement, sinon l'utilisateur n'a plus aucun moyen de changer de liaison
-/// dans les réglages.
-///
-/// Toute opération échoue avec une phrase affichable. C'est délibérément un
-/// échec et non un repli silencieux vers la simulation : croire qu'on pilote
-/// sa piscine alors qu'on ne pilote rien est le pire des deux résultats,
-/// surtout pour un volet.
 class UnavailableDriver implements PoolDeviceDriver {
   const UnavailableDriver(this.kind);
 
@@ -41,8 +30,7 @@ class UnavailableDriver implements PoolDeviceDriver {
 
   @override
   Future<void> pulse(DeviceChannel channel, {required Duration autoOff}) async {
-    // La garde de sécurité s'applique avant tout : une temporisation illégale
-    // reste un défaut de programmation, même sur un pilote indisponible.
+
     CoverSafety.checkCoverAutoOff(channel, autoOff);
     _unavailable('pulse');
   }
@@ -72,8 +60,7 @@ class UnavailableDriver implements PoolDeviceDriver {
 
   @override
   Future<void> clearFiltrationSchedule() async {
-    // Rien n'a jamais été écrit : échouer ici empêcherait un changement de
-    // matériel de se terminer.
+
   }
 
   @override

@@ -13,8 +13,7 @@ void main() {
       expect(state.position, CoverPosition.unknown);
       expect(state.motion, CoverMotion.idle);
       expect(state.pump, PumpState.unknown);
-      // Sans preuve du contraire, la position est une estimation (règle de
-      // sécurité n. 6).
+
       expect(state.isEstimated, isTrue);
       expect(state.isMoving, isFalse);
       expect(state.isPumpRunning, isFalse);
@@ -24,7 +23,7 @@ void main() {
 
   group('position déduite du taux d’ouverture', () {
     test('les extremites tolerent 2 % d’imprecision', () {
-      // Une course de 90 s chronométrée à 88 s doit se lire « fermé ».
+
       expect(CoverState.positionFromRatio(0.0), CoverPosition.closed);
       expect(CoverState.positionFromRatio(0.02), CoverPosition.closed);
       expect(CoverState.positionFromRatio(0.98), CoverPosition.open);
@@ -103,8 +102,7 @@ void main() {
     });
 
     test('un mouvement n’est jamais restaure', () {
-      // Un volet ne peut pas être en mouvement au lancement : aucun mouvement
-      // ne survit au relâchement du doigt (règle de sécurité n. 1).
+
       const CoverState original = CoverState(
         position: CoverPosition.partiallyOpen,
         motion: CoverMotion.closing,
@@ -155,7 +153,7 @@ void main() {
     });
 
     test('une position mesurée ne se devine pas', () {
-      // Sans `false` explicite, la position reste présentée comme estimée.
+
       expect(
         CoverState.fromJson(<String, dynamic>{'isEstimated': 'non'})
             .isEstimated,

@@ -22,7 +22,6 @@ void main() {
   late InMemoryReadingsRepository readings;
   late ProviderContainer container;
 
-  /// Conteneur câblé sur les doubles en mémoire : aucun disque, aucun réseau.
   ProviderContainer build({PoolConfig? config}) {
     settings = InMemorySettingsStore(poolConfig: config);
     readings = InMemoryReadingsRepository();
@@ -42,7 +41,7 @@ void main() {
 
   group('choix du pilote', () {
     test('la simulation est le pilote par défaut', () {
-      // L'application doit être utilisable avant tout appairage.
+
       expect(container.read(deviceDriverProvider), isA<SimulationDriver>());
       expect(container.read(mqttDriverProvider), isNull);
     });
@@ -64,8 +63,7 @@ void main() {
 
       final PoolDeviceDriver driver = container.read(deviceDriverProvider);
       expect(driver, isA<UnavailableDriver>());
-      // L'application démarre quand même : sinon l'utilisateur ne pourrait
-      // plus changer de liaison dans les réglages.
+
       await expectLater(
         driver.ping(),
         throwsA(
@@ -91,8 +89,7 @@ void main() {
       await container
           .read(poolConfigProvider.notifier)
           .edit(name: 'Bassin sud');
-      // Sans ce filtrage, un renommage couperait un mouvement de volet en
-      // cours.
+
       expect(container.read(deviceDriverProvider), same(before));
     });
   });
@@ -122,8 +119,6 @@ void main() {
           .read(poolConfigProvider.notifier)
           .setSafetyConsent(given: true);
 
-      // Le contrôleur relit la configuration à chaque commande : c'est ce qui
-      // rend le consentement effectif immédiatement (règle n° 4).
       expect(await cover.pressOpen(), isTrue);
       await cover.release();
     });
@@ -161,7 +156,6 @@ void main() {
         recommendationsProvider,
       );
 
-      // Le TAC stabilise le pH : il passe devant.
       expect(
         actions.map((DoseRecommendation a) => a.parameter).toList(),
         <WaterParameter>[WaterParameter.tac, WaterParameter.ph],
@@ -173,13 +167,12 @@ void main() {
       await container
           .read(readingsProvider.notifier)
           .record(WaterReading(takenAt: _start, ph: 7.8, tac: 100.0));
-      // pH moins à 100 % : 0,60 x 40 x 60 = 1 440 g
+
       expect(
         container.read(recommendationsProvider).first.quantity,
         closeTo(1440.0, 0.001),
       );
 
-      // Le même besoin avec un produit à 60 % : 1 440 / 0,60 = 2 400 g
       await container
           .read(poolConfigProvider.notifier)
           .declareProduct(
@@ -207,7 +200,6 @@ void main() {
               ),
             );
 
-        // LSI = 7,4 + 0,64 + 1,99794 + 2,0 - 12,1 = -0,062
         expect(
           container.read(waterBalanceProvider)?.index,
           closeTo(-0.062, 0.001),
@@ -236,15 +228,13 @@ void main() {
 
   group('filtration dérivée', () {
     test('sans température, aucun planning', () {
-      // Proposer un planning par défaut ferait filtrer treize heures un
-      // bassin à 12 °C.
+
       expect(container.read(filtrationPlanProvider), isNull);
       expect(container.read(waterTemperatureProvider), isNull);
     });
 
     test('la rotation reste calculable sans mesure', () {
-      // Elle ne dépend que du bassin et de la pompe.
-      // 40 / (10 x 0,75) = 5,333 h = 320 min
+
       expect(container.read(turnoverProvider), const Duration(minutes: 320));
     });
 
@@ -254,7 +244,7 @@ void main() {
           .record(WaterReading(takenAt: _start, temperature: 26.0));
 
       final FiltrationSchedule? plan = container.read(filtrationPlanProvider);
-      // 26 / 2 = 13 h, découpées en trois créneaux dont la somme est exacte.
+
       expect(plan?.recommendedMinutes, 780);
       expect(plan?.totalMinutes, 780);
       expect(plan?.cycles.length, 3);
@@ -266,9 +256,8 @@ void main() {
           .read(readingsProvider.notifier)
           .record(WaterReading(takenAt: _start, temperature: 26.0));
 
-      // 80 / 7,5 = 10,67 h = 640 min
       expect(container.read(turnoverProvider), const Duration(minutes: 640));
-      // La durée reste dictée par la température.
+
       expect(container.read(filtrationPlanProvider)?.recommendedMinutes, 780);
     });
   });
@@ -293,7 +282,7 @@ void main() {
 
   group('chargement initial', () {
     test('les contrôleurs relisent ce qui était enregistré', () async {
-      // Une session précédente a laissé une configuration et une mesure.
+
       container = build(
         config: const PoolConfig().copyWith(
           volumeM3: 62.5,
@@ -313,8 +302,7 @@ void main() {
             ?.ph,
         7.5,
       );
-      // Et les recommandations suivent, avec le bon volume.
-      // 7,5 - 7,2 = 0,30 ; 0,30 x 62,5 x 60 = 1 125 g
+
       expect(
         container.read(recommendationsProvider).first.quantity,
         closeTo(1125.0, 0.001),

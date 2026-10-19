@@ -23,7 +23,6 @@ void main() {
         wrap(const MeasureScale(parameter: WaterParameter.ph, value: 7.2)),
       );
 
-      // Les bornes acceptables aux extrémités, la plage conseillée au centre.
       expect(find.text('6,8'), findsOneWidget);
       expect(find.text('7,6'), findsOneWidget);
       expect(find.text('7,0 – 7,4'), findsOneWidget);
@@ -57,8 +56,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Un repère à zéro laisserait croire à une mesure. Les graduations
-      // restent, elles disent où se situe la plage conseillée.
       expect(find.text('7,0 – 7,4'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -66,8 +63,7 @@ void main() {
     testWidgets('une valeur hors échelle ne fait pas déborder le repère', (
       WidgetTester tester,
     ) async {
-      // Un pH de 9,5 est très au-delà de la plage acceptable : le repère doit
-      // se coller au bord, pas sortir du widget.
+
       for (final double value in <double>[0.0, 9.5, -3.0, 99.0]) {
         await tester.pumpWidget(
           wrap(MeasureScale(parameter: WaterParameter.ph, value: value)),
@@ -78,8 +74,7 @@ void main() {
     });
 
     testWidgets('chaque paramètre a son nuancier', (WidgetTester tester) async {
-      // Les couleurs viennent des vrais réactifs, et il y en a pour tous les
-      // paramètres : un nuancier manquant ferait planter l'affichage.
+
       for (final WaterParameter parameter in WaterParameter.values) {
         expect(
           AppTheme.scaleFor(parameter).length,
@@ -127,9 +122,7 @@ void main() {
       await tester.pumpWidget(
         wrap(const ReadingRow(parameter: WaterParameter.tac, value: 100)),
       );
-      // L'unité est dans le même bloc que le chiffre, mais à 42 % de sa
-      // taille : un « mg/L » aussi gros que « 100 » pèserait autant que la
-      // mesure.
+
       expect(find.textContaining('100'), findsWidgets);
       expect(find.textContaining('mg/L'), findsWidgets);
     });
@@ -140,19 +133,17 @@ void main() {
       await tester.pumpWidget(
         wrap(const ReadingRow(parameter: WaterParameter.tac, value: null)),
       );
-      // Deux fois « non mesuré » : à la place de la valeur et comme état.
+
       expect(find.text('non mesuré'), findsNWidgets(2));
       expect(find.text('0'), findsNothing);
-      // Un tiret rendu en grande taille devient un trait plein qu'on prend
-      // pour un élément d'interface en panne.
+
       expect(find.text('—'), findsNothing);
     });
 
     testWidgets('l’âge de la mesure est affiché quand il compte', (
       WidgetTester tester,
     ) async {
-      // Un TAC de trois semaines n'a pas la même valeur qu'un TAC d'hier, et
-      // le savoir change la confiance qu'on accorde à la dose calculée.
+
       const Map<String, Duration> cases = <String, Duration>{
         'à l’instant': Duration(seconds: 30),
         'il y a 40 min': Duration(minutes: 40),

@@ -3,13 +3,6 @@ import 'package:sqflite/sqflite.dart';
 
 import '../models/water_reading.dart';
 
-/// Une mesure telle qu'elle est stockée : son contenu, et sa clé.
-///
-/// L'identifiant vit ici et non dans [WaterReading] : le modèle traverse
-/// toutes les couches et ne doit rien savoir de la base. Sans clé, supprimer
-/// une mesure supposerait que deux mesures n'ont jamais le même horodatage,
-/// ce qui est faux dès qu'une saisie et une trame de sonde tombent la même
-/// seconde.
 class StoredReading {
   const StoredReading({required this.id, required this.reading});
 
@@ -27,27 +20,13 @@ class StoredReading {
   String toString() => 'StoredReading($id, ${reading.takenAt})';
 }
 
-/// Ce dont l'application a besoin de l'historique des mesures.
-///
-/// L'interface permet de tester les contrôleurs sans base, et laisserait
-/// changer de moteur de stockage sans toucher aux couches au-dessus.
 abstract class ReadingsRepository {
   Future<StoredReading> insert(WaterReading reading);
 
-  /// Les mesures les plus récentes d'abord.
   Future<List<StoredReading>> recent({int limit});
 
-  /// La dernière mesure enregistrée, éventuellement filtrée par origine.
-  ///
-  /// Le filtre par origine sert à la règle d'échantillonnage : une saisie
-  /// manuelle ne doit pas empêcher d'enregistrer un point de sonde, et
-  /// inversement.
   Future<StoredReading?> latest({MeasurementSource? source});
 
-  /// Les mesures d'une période, dans l'ordre chronologique.
-  ///
-  /// Ordre croissant parce que c'est celui d'une courbe : l'historique
-  /// s'affiche du plus ancien au plus récent, de gauche à droite.
   Future<List<StoredReading>> between({
     required DateTime from,
     required DateTime to,
@@ -55,7 +34,6 @@ abstract class ReadingsRepository {
 
   Future<void> delete(int id);
 
-  /// Purge les mesures antérieures à une date.
   Future<int> deleteOlderThan(DateTime limit);
 
   Future<int> count();
@@ -63,21 +41,13 @@ abstract class ReadingsRepository {
   Future<void> close();
 }
 
-/// Historique des mesures, en SQLite.
-///
-/// Les horodatages sont stockés en millisecondes UTC depuis l'époque Unix, et
-/// non en texte : c'est comparable et triable en SQL sans dépendre du format
-/// de date, et cela évite le piège du décalage horaire au changement d'heure.
 class ReadingsDatabase implements ReadingsRepository {
   ReadingsDatabase({this._path});
 
   static const String tableName = 'readings';
 
-  /// Version du schéma. Toute évolution incompatible l'incrémente et ajoute sa
-  /// migration dans [_upgrade].
   static const int schemaVersion = 1;
 
-  /// Nom du fichier de base sur l'appareil.
   static const String fileName = 'aquacontrol.db';
 
   final String? _path;
@@ -100,8 +70,7 @@ class ReadingsDatabase implements ReadingsRepository {
   }
 
   Future<void> _create(Database db, int version) async {
-    // Toutes les mesures sont facultatives : on saisit ce qu'on a mesuré, et
-    // une colonne NULL veut dire « non mesuré », jamais « zéro ».
+
     await db.execute('''
       CREATE TABLE $tableName (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,35 +88,22 @@ class ReadingsDatabase implements ReadingsRepository {
       )
     ''');
 
-    // L'historique se lit toujours par date décroissante, et la courbe par
-    // plage de dates : sans cet index, chaque affichage relit toute la table.
     await db.execute(
       'CREATE INDEX idx_${tableName}_taken_at ON $tableName (taken_at DESC)',
     );
   }
 
-  /// Migrations de schéma.
-  ///
-  /// Aucune à ce jour : le schéma est en version 1 et le champ `source` y
-  /// figure dès l'origine, parce qu'il a été ajouté au modèle avant que la
-  /// base n'existe. La méthode est publique pour deux raisons : la première
-  /// migration a déjà sa place, et elle reste vérifiable par un test sans
-  /// avoir à fabriquer une base d'une version antérieure qui n'a jamais
-  /// existé.
   static Future<void> migrate(
     Database db,
     int oldVersion,
     int newVersion,
   ) async {
-    // À compléter au premier changement de schéma, en enchaînant les paliers :
-    //   if (oldVersion < 2) { await db.execute('ALTER TABLE ...'); }
+
   }
 
-  /// Traduit une mesure en ligne de table.
   static Map<String, Object?> toRow(WaterReading reading) {
     return <String, Object?>{
-      // Stocké en UTC : une base relue après un voyage ou un changement
-      // d'heure doit rendre les mêmes instants.
+
       'taken_at': reading.takenAt.toUtc().millisecondsSinceEpoch,
       'ph': reading.ph,
       'free_chlorine': reading.freeChlorine,
@@ -162,11 +118,6 @@ class ReadingsDatabase implements ReadingsRepository {
     };
   }
 
-  /// Reconstruit une mesure depuis une ligne.
-  ///
-  /// Tolérant, pour la même raison que les `fromJson` : une base écrite par
-  /// une version antérieure, ou une ligne modifiée à la main, ne doit pas
-  /// faire échouer l'affichage de tout l'historique.
   static StoredReading fromRow(Map<String, Object?> row) {
     return StoredReading(
       id: _asInt(row['id']) ?? 0,
@@ -221,8 +172,6 @@ class ReadingsDatabase implements ReadingsRepository {
     return null;
   }
 
-  /// Une origine illisible vaut « saisie » : on ne prête pas à une mesure la
-  /// crédibilité d'une sonde sans preuve.
   static MeasurementSource _asSource(Object? value) {
     if (value is String) {
       for (final MeasurementSource source in MeasurementSource.values) {
@@ -247,8 +196,7 @@ class ReadingsDatabase implements ReadingsRepository {
     final List<Map<String, Object?>> rows = await db.query(
       tableName,
       orderBy: 'taken_at DESC, id DESC',
-      // Une limite non positive ramènerait toute la table sur un écran qui
-      // n'en montre qu'une poignée.
+
       limit: limit < 1 ? 1 : limit,
     );
     return rows.map(fromRow).toList(growable: false);
@@ -276,8 +224,7 @@ class ReadingsDatabase implements ReadingsRepository {
     required DateTime to,
   }) async {
     final Database db = await _open();
-    // Bornes incluses : une plage « du 1er au 7 » doit contenir les mesures
-    // prises exactement à ces instants.
+
     final List<Map<String, Object?>> rows = await db.query(
       tableName,
       where: 'taken_at >= ? AND taken_at <= ?',
@@ -322,11 +269,6 @@ class ReadingsDatabase implements ReadingsRepository {
   }
 }
 
-/// Historique en mémoire, pour les tests des couches au-dessus.
-///
-/// Reproduit les mêmes ordres de tri et les mêmes bornes que la base réelle :
-/// un test qui passe ici doit passer sur SQLite, et c'est ce que vérifient les
-/// tests de [ReadingsDatabase].
 class InMemoryReadingsRepository implements ReadingsRepository {
   final List<StoredReading> _rows = <StoredReading>[];
   int _nextId = 1;

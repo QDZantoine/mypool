@@ -23,8 +23,7 @@ void main() {
     });
 
     test('un stockage vide rend les valeurs par défaut', () async {
-      // L’application doit être utilisable au premier lancement : 40 m3 au
-      // chlore stabilisé, en mode simulation.
+
       expect(await store.loadPoolConfig(), const PoolConfig());
       expect(await store.loadMqttSettings(), const MqttSettings());
     });
@@ -48,7 +47,7 @@ void main() {
         final PoolConfig restored = await store.loadPoolConfig();
 
         expect(restored, original);
-        // Le consentement de sécurité fait partie de ce qui est persisté.
+
         expect(restored.safetyConsentGiven, isTrue);
         expect(
           restored.inventory.forRole(ChemicalRole.chlorineSlow).activePercent,
@@ -71,9 +70,7 @@ void main() {
     });
 
     test('un JSON corrompu rend les valeurs par défaut', () async {
-      // La règle du projet : l’application doit toujours s’ouvrir. Un écran
-      // d’erreur au lancement empêcherait justement de corriger le réglage
-      // fautif.
+
       await withStored(<String, Object>{
         PreferencesSettingsStore.poolConfigKey: '{ceci n’est pas du JSON',
         PreferencesSettingsStore.mqttSettingsKey: '',
@@ -95,7 +92,7 @@ void main() {
       final PoolConfig restored = await store.loadPoolConfig();
       expect(restored.volumeM3, 40.0);
       expect(restored.treatment, TreatmentType.stabilizedChlorine);
-      // Les valeurs aberrantes sont bornées, pas rejetées.
+
       expect(restored.pumpEfficiency, 1.0);
     });
 
@@ -114,8 +111,7 @@ void main() {
 
     test('une valeur stockée sous un autre type ne fait pas échouer '
         'l’ouverture', () async {
-      // Cas d’une version antérieure qui aurait écrit un entier sous la même
-      // clé : la lecture doit retomber sur les défauts, pas lever.
+
       await withStored(<String, Object>{
         PreferencesSettingsStore.poolConfigKey: 42,
       });
@@ -136,13 +132,12 @@ void main() {
       expect(await store.loadMqttSettings(), const MqttSettings());
       final SharedPreferences preferences =
           await SharedPreferences.getInstance();
-      // Les valeurs écrites par d’autres plugins ne nous appartiennent pas.
+
       expect(preferences.getString('plugin.autre.cle'), 'à garder');
     });
 
     test('les clés sont versionnées', () async {
-      // Un changement incompatible de format prendra un suffixe `.v2`, ce qui
-      // laisse les anciennes valeurs en place au lieu de les réinterpréter.
+
       expect(PreferencesSettingsStore.poolConfigKey, endsWith('.v1'));
       expect(PreferencesSettingsStore.mqttSettingsKey, endsWith('.v1'));
     });
@@ -178,7 +173,7 @@ void main() {
     });
 
     test('compte les écritures', () async {
-      // Sert à vérifier qu’un contrôleur n’enregistre pas à chaque frappe.
+
       final InMemorySettingsStore store = InMemorySettingsStore();
       expect(store.writeCount, 0);
       await store.savePoolConfig(const PoolConfig());

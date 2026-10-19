@@ -51,7 +51,7 @@ void main() {
       final List<PhHistoryEntry> entries = <PhHistoryEntry>[
         for (int i = 0; i < 20; i++)
           PhHistoryEntry(
-            timestamp: DateTime.utc(2026, 9, 29, 10, i * 5), // Toutes les 5 min de 10:00 à 11:35
+            timestamp: DateTime.utc(2026, 9, 29, 10, i * 5), 
             ph: 7.0 + (i * 0.01),
           ),
       ];
@@ -67,9 +67,9 @@ void main() {
     test('filterLastEntriesSpacedBy saute les données trop rapprochées (< 5 min)', () {
       final List<PhHistoryEntry> entries = <PhHistoryEntry>[
         PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 0), ph: 7.0),
-        PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 2), ph: 7.1), // Ignoré
+        PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 2), ph: 7.1), 
         PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 5), ph: 7.2),
-        PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 8), ph: 7.3), // Ignoré
+        PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 8), ph: 7.3), 
         PhHistoryEntry(timestamp: DateTime.utc(2026, 9, 29, 10, 10), ph: 7.4),
       ];
 

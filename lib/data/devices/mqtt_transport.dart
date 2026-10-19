@@ -6,7 +6,6 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 import '../../models/mqtt_settings.dart';
 import 'pool_device_driver.dart';
 
-/// Un message reçu du broker.
 class MqttInbound {
   const MqttInbound(this.topic, this.payload);
 
@@ -17,12 +16,6 @@ class MqttInbound {
   String toString() => 'MqttInbound($topic, $payload)';
 }
 
-/// Ce dont le pilote a besoin d'un broker MQTT, et rien de plus.
-///
-/// Cette abstraction existe pour une raison précise : elle permet de tester
-/// tout le pilote — y compris la reconnexion et l'interdiction de rétention
-/// sur les commandes — sans broker et sans réseau. La dépendance à
-/// `mqtt_client` est confinée à [MqttClientTransport], en dessous.
 abstract class MqttTransport {
   Future<void> connect();
 
@@ -30,26 +23,15 @@ abstract class MqttTransport {
 
   bool get isConnected;
 
-  /// Messages reçus sur les topics abonnés.
   Stream<MqttInbound> get messages;
 
-  /// Passages en ligne / hors ligne de la liaison.
   Stream<bool> get connectionChanges;
 
   Future<void> subscribe(String topicFilter);
 
-  /// Publie un message.
-  ///
-  /// `retain` est exposé parce que les topics d'état l'utilisent, mais le
-  /// pilote ne le passe JAMAIS à `true` sur un topic de commande.
   Future<void> publish(String topic, String payload, {bool retain = false});
 }
 
-/// Transport réel, au-dessus du paquet `mqtt_client`.
-///
-/// NON COUVERT PAR LES TESTS UNITAIRES : il ne fait rien d'autre que traduire
-/// l'API de `mqtt_client`, et l'exercer demanderait un broker. Toute la
-/// logique testable a été poussée dans [MqttTransport] et dans le pilote.
 class MqttClientTransport implements MqttTransport {
   MqttClientTransport({
     required MqttSettings settings,
@@ -182,7 +164,7 @@ class MqttClientTransport implements MqttTransport {
     try {
       _client.subscribe(topicFilter, MqttQos.atLeastOnce);
     } catch (_) {
-      // Absorb socket/connection state exceptions during reconnects
+
     }
   }
 

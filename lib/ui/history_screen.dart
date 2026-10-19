@@ -12,7 +12,6 @@ import '../state/water_readings_controller.dart';
 import 'theme.dart';
 import 'widgets/history_chart.dart';
 
-/// Historique des mesures : une courbe par paramètre, et la liste.
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
@@ -120,10 +119,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     }
   }
 
-  /// Les paramètres dont une courbe a du sens.
-  ///
-  /// Le chlore combiné et le sel n'y sont pas : le premier se lit en tout ou
-  /// rien, le second ne bouge qu'aux remplissages.
   static const List<WaterParameter> _chartable = <WaterParameter>[
     WaterParameter.ph,
     WaterParameter.freeChlorine,
@@ -138,8 +133,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final ThemeData theme = Theme.of(context);
     final ReadingsState state = ref.watch(readingsProvider);
 
-    // L'ordre d'affichage de la courbe est chronologique, l'inverse de la
-    // liste : une courbe se lit de gauche à droite.
     final List<HistoryPoint> points;
     final bool isUsingInfluxForPh =
         _shown == WaterParameter.ph && _influxPhEntries.isNotEmpty;
@@ -283,7 +276,6 @@ class _ReadingRow extends StatelessWidget {
     final WaterReading reading = stored.reading;
     final DateTime local = reading.takenAt.toLocal();
 
-    // Résumé compact : seules les valeurs présentes apparaissent.
     final List<String> parts = <String>[
       for (final WaterParameter parameter in WaterParameter.values)
         if (reading.valueOf(parameter) != null)

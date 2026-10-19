@@ -14,7 +14,7 @@ void main() {
       expect(WaterParameter.ph.idealMax, 7.4);
       expect(WaterParameter.ph.acceptableMin, 6.8);
       expect(WaterParameter.ph.acceptableMax, 7.6);
-      // On vise 7,2 : le meilleur compromis efficacité du chlore / confort.
+
       expect(WaterParameter.ph.target, 7.2);
     });
 
@@ -68,7 +68,7 @@ void main() {
           lessThanOrEqualTo(parameter.acceptableMax),
           reason: parameter.name,
         );
-        // La cible est toujours dans la plage idéale.
+
         expect(
           parameter.target,
           inInclusiveRange(parameter.idealMin, parameter.idealMax),
@@ -80,14 +80,14 @@ void main() {
 
   group('statut d’un paramètre', () {
     test('les cinq états du pH', () {
-      // 6,5 < 6,8 acceptable
+
       expect(WaterParameter.ph.statusOf(6.5), ParameterStatus.veryLow);
-      // 6,9 entre 6,8 et 7,0
+
       expect(WaterParameter.ph.statusOf(6.9), ParameterStatus.low);
       expect(WaterParameter.ph.statusOf(7.2), ParameterStatus.ideal);
-      // 7,5 entre 7,4 et 7,6
+
       expect(WaterParameter.ph.statusOf(7.5), ParameterStatus.high);
-      // 7,9 > 7,6 acceptable
+
       expect(WaterParameter.ph.statusOf(7.9), ParameterStatus.veryHigh);
     });
 
@@ -97,18 +97,18 @@ void main() {
     });
 
     test('une valeur absente est inconnue, pas nulle', () {
-      // Sans cela, un pH non mesure declencherait une correction massive.
+
       expect(WaterParameter.ph.statusOf(null), ParameterStatus.unknown);
     });
   });
 
   group('formatage des valeurs', () {
     test('virgule décimale et unité', () {
-      // pH : une décimale, pas d’unité
+
       expect(WaterParameter.ph.formatValue(7.2), '7,2');
-      // chlore : une décimale et mg/L
+
       expect(WaterParameter.freeChlorine.formatValue(1.5), '1,5 mg/L');
-      // TAC : entier
+
       expect(WaterParameter.tac.formatValue(100.0), '100 mg/L');
       expect(WaterParameter.th.formatValue(250.0), '250 mg/L');
       expect(WaterParameter.salt.formatValue(4.0), '4,0 g/L');
@@ -124,7 +124,7 @@ void main() {
     });
 
     test('une seule valeur suffit à rendre la mesure non vide', () {
-      // Même la température seule, qui ne declenche pourtant aucun dosage.
+
       expect(
         WaterReading(takenAt: _fixedDate, temperature: 26.0).isEmpty,
         isFalse,
@@ -170,8 +170,7 @@ void main() {
 
   group('lectures JSON tolerantes', () {
     test('un entier ecrit en réel ou en chaîne reste lisible', () {
-      // Les durées et compteurs sont relus par readInt : réel arrondi,
-      // chaîne entière, chaîne décimale, puis repli.
+
       expect(
         FiltrationCycle.fromJson(<String, dynamic>{'durationMinutes': 390.4})
             .durationMinutes,
@@ -193,7 +192,7 @@ void main() {
         }).durationMinutes,
         0,
       );
-      // Un NaN n’est pas fini : repli sur le défaut.
+
       expect(
         FiltrationCycle.fromJson(<String, dynamic>{
           'durationMinutes': double.nan,
@@ -203,7 +202,7 @@ void main() {
     });
 
     test('un booleen ecrit en nombre ou en chaîne reste lisible', () {
-      // Le consentement de sécurité est relu par readBool.
+
       expect(
         PoolConfig.fromJson(<String, dynamic>{'safetyConsentGiven': 1})
             .safetyConsentGiven,
@@ -227,7 +226,7 @@ void main() {
     });
 
     test('une carte à clés non textuelles est ignoree, pas rejetee', () {
-      // Un JSON relu depuis SQLite peut porter des clés numériques.
+
       final PoolConfig restored = PoolConfig.fromJson(<Object?, Object?>{
         1: 'parasite',
         'volumeM3': 55.0,
@@ -271,7 +270,7 @@ void main() {
       );
 
       expect(restored, original);
-      // Le point clef : absent ne devient pas zéro.
+
       expect(restored.tac, isNull);
       expect(restored.freeChlorine, isNull);
     });
@@ -281,7 +280,7 @@ void main() {
     test('un objet vide rend une mesure vide datee de l’époque Unix', () {
       final WaterReading restored = WaterReading.fromJson(<String, dynamic>{});
       expect(restored.isEmpty, isTrue);
-      // Date fausse mais stable : le domaine ne lit jamais l’horloge.
+
       expect(restored.takenAt.millisecondsSinceEpoch, 0);
     });
 
@@ -302,14 +301,14 @@ void main() {
       expect(restored.ph, isNull);
       expect(restored.tac, isNull);
       expect(restored.th, isNull);
-      // La valeur lisible est conservee.
+
       expect(restored.freeChlorine, 1.5);
     });
 
     test('les nombres ecrits en chaîne sont acceptes', () {
       final WaterReading restored = WaterReading.fromJson(<String, dynamic>{
         'ph': '7.4',
-        // Virgule décimale, comme une saisie francaise mal sérialisée.
+
         'tac': '105,5',
       });
 
@@ -318,7 +317,7 @@ void main() {
     });
 
     test('un NaN ou un infini devient absent', () {
-      // Ces valeurs se propageraient dans tous les calculs de dose.
+
       final WaterReading restored = WaterReading.fromJson(<String, dynamic>{
         'ph': double.nan,
         'tac': double.infinity,
@@ -334,7 +333,7 @@ void main() {
             .millisecondsSinceEpoch,
         0,
       );
-      // Un horodatage en millisecondes reste lisible.
+
       expect(
         WaterReading.fromJson(<String, dynamic>{'takenAt': 1770000000000})
             .takenAt
