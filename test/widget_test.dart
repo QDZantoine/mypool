@@ -22,30 +22,25 @@ void main() {
           readings ?? InMemoryReadingsRepository(),
         ),
       ],
-      child: const MaterialApp(
-        home: ShellView(),
-      ),
+      child: const MaterialApp(home: ShellView()),
     );
   }
 
-  testWidgets('l’écran de démarrage (SplashScreen) affiche le titre et permet le passage', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: AquaControlApp(),
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'l’écran de démarrage (SplashScreen) affiche le titre et permet le passage',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const ProviderScope(child: AquaControlApp()));
+      await tester.pump();
 
-    expect(find.byType(SplashScreen), findsOneWidget);
-    expect(find.text('AQUACONTROL'), findsOneWidget);
+      expect(find.byType(SplashScreen), findsOneWidget);
+      expect(find.text('AQUACONTROL'), findsOneWidget);
 
-    await tester.tap(find.byType(SplashScreen));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(SplashScreen));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(HomeScreen), findsOneWidget);
-  });
+      expect(find.byType(HomeScreen), findsOneWidget);
+    },
+  );
 
   testWidgets('l’application s’ouvre sur l’accueil', (
     WidgetTester tester,
@@ -56,7 +51,7 @@ void main() {
 
     expect(find.byType(HomeScreen), findsOneWidget);
 
-    expect(find.text('Ma piscine'), findsOneWidget);
+    expect(find.text('AquaControl'), findsWidgets);
 
     expect(find.text('Pas encore de mesure'), findsOneWidget);
     expect(find.textContaining('Testez l’eau'), findsOneWidget);

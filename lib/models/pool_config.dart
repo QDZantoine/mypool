@@ -2,7 +2,6 @@ import 'chemical_product.dart';
 import 'json_tolerant.dart';
 
 enum TreatmentType {
-
   stabilizedChlorine,
 
   unstabilizedChlorine,
@@ -16,29 +15,9 @@ enum TreatmentType {
 
 enum FilterType { sand, glass, cartridge, diatomaceousEarth, zeolite }
 
-enum CoverType {
+enum CoverType { submerged, outOfWater, bars, bubbleCover, none }
 
-  submerged,
-
-  outOfWater,
-
-  bars,
-
-  bubbleCover,
-
-  none,
-}
-
-enum DriverKind {
-
-  simulation,
-
-  localModule,
-
-  homeAssistant,
-
-  mqtt,
-}
+enum DriverKind { simulation, localModule, homeAssistant, mqtt }
 
 typedef Kind = DriverKind;
 
@@ -60,7 +39,7 @@ class PoolConfig {
     this.safetyConsentGiven = false,
   });
 
-  static const String defaultName = 'Ma piscine';
+  static const String defaultName = 'AquaControl';
 
   static const double defaultVolumeM3 = 40.0;
   static const double defaultLengthM = 8.0;

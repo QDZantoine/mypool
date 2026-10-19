@@ -108,7 +108,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Rien à verser'), findsOneWidget);
+      expect(find.text('Eau parfaite'), findsOneWidget);
 
       expect(find.textContaining('7,2'), findsWidgets);
       expect(find.textContaining('26,0'), findsWidgets);
@@ -200,7 +200,6 @@ void main() {
   });
 
   group('saisie', () {
-
     Finder fieldOf(WaterParameter parameter) => find.ancestor(
       of: find.text(parameter.label.toUpperCase()),
       matching: find.byType(Column),

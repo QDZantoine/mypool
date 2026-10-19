@@ -37,7 +37,6 @@ class HomeScreen extends ConsumerWidget {
       color: AppTheme.chlorine,
       onRefresh: () => ref.read(readingsProvider.notifier).load(),
       child: ListView(
-
         padding: EdgeInsets.fromLTRB(
           AppTheme.gutter,
           AppTheme.gutter,
@@ -195,7 +194,7 @@ class _Verdict {
 
     if (actions.isEmpty) {
       return _Verdict(
-        title: 'Rien à verser',
+        title: 'Votre eau est parfaite',
         detail: 'Toutes les valeurs mesurées sont dans leur plage.',
         tone: AppTheme.inRange,
         linkLabel: linkLabel,

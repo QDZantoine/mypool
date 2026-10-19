@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -160,7 +159,6 @@ class _SplashScreenState extends State<SplashScreen>
           decoration: BoxDecoration(gradient: bgGradient),
           child: Stack(
             children: [
-
               Positioned.fill(
                 child: CustomPaint(
                   painter: _PoolBackgroundPainter(
@@ -186,13 +184,11 @@ class _SplashScreenState extends State<SplashScreen>
                           return Stack(
                             alignment: Alignment.center,
                             children: [
-
                               Positioned(
                                 bottom: 20,
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
-
                                     Transform.scale(
                                       scale: _rippleScale.value,
                                       child: Opacity(
@@ -249,15 +245,6 @@ class _SplashScreenState extends State<SplashScreen>
                                             size: 26,
                                           ),
                                           SizedBox(width: 8),
-                                          Text(
-                                            'Ma Piscine',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
                                         ],
                                       ),
                                     ),
